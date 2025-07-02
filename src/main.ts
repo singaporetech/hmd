@@ -10,7 +10,10 @@ import { App } from './app';
 import { UI } from './ui';
 
 // get the canvas element
-const canvas = <HTMLCanvasElement>document.getElementById('renderCanvas');
+const canvas = document.getElementById('renderCanvas');
+if (!(canvas instanceof HTMLCanvasElement)) {
+  throw new Error('Canvas element not found or is not a canvas');
+}
 
 // initialize babylon engine
 const engine = new Engine(canvas, true);

@@ -1,5 +1,5 @@
 {
-    "name": "diaverse",
+    "name": "hmd-simulator",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
@@ -19,10 +19,10 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@babylonjs/core": "^7.32.0",
-        "@babylonjs/gui": "^7.31.0",
-        "@babylonjs/loaders": "^7.32.0",
-        "@babylonjs/materials": "^7.30.0",
+        "@babylonjs/core": "^6.49.0",
+        "@babylonjs/gui": "^6.49.0",
+        "@babylonjs/loaders": "^6.49.0",
+        "@babylonjs/materials": "^6.49.0",
         "@types/node": "^22.10.2",
         "babylonjs": "^7.28.0"
     },
