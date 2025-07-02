@@ -27,9 +27,10 @@ One of the current motivation is to support the YouTube tutorial: https://youtu.
 ### Short-term
 - Fix critical bugs
 - Add rendering of the virtual image planes
+- Add lens distortion shader to counteract the real lens's barrel distortion (using lens params from Cardboard spec)
 
 ### Mid-term
-- Add interaction mechanisms in VR
+- Create a VR mode that renders the HMD View prior to applying real lens optics. This will allow user to see the actual outputs in a Google Cardboard or similar HMD.
 
 ### Long-term
 - Transition into a platform of multiple implementation-focused learning resources for developing immersive applications
