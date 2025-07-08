@@ -4,7 +4,7 @@ This a web-based VR head-mounted display (HMD) simulator that helps to interacti
 
 ![demo](https://github.com/user-attachments/assets/dcddccde-f353-4098-9406-416448b85bfd)
 
-One of the current motivation is to support the YouTube tutorial: https://youtu.be/OKD4jrnn4WE , but you play with it regardless of the tutorial.
+One of the current motivation is to support the YouTube tutorial: https://youtu.be/OKD4jrnn4WE , but you can play with it regardless of the tutorial.
 
 # Project Status
 
@@ -37,7 +37,7 @@ One of the current motivation is to support the YouTube tutorial: https://youtu.
 
 # How to run
 
-Just go to the live page built from the latest version that is served via GitHub pages: https://diaversity.org
+Just go to the live page built from the latest version that is served via GitHub pages: https://hmd.diaversity.org
 
 ### Some interesting things to try
 - Increase the distLens2Display until it is greater than the focal length, f, of the lens. Something will flip...
