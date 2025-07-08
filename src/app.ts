@@ -41,6 +41,8 @@ import {
     LAYER_FRUSTUM,
     MAIN_CAM_POS,
     CAM_SPEED,
+    PIP_VIEWPORT_WIDTH,
+    DisplayMode,
 } from "./constants";
 
 /**
@@ -69,10 +71,13 @@ export class App {
 
     // PIP viewport parameters
     hmd!: HMD;
-    pipViewPortWidth = 0.25; //TODO shift to constants
+    pipViewPortWidth = PIP_VIEWPORT_WIDTH;
     pipViewPortHeight!: number;
     pipViewPortX!: number;
     pipViewPortY!: number;
+
+    // display mode
+    currDisplayMode: DisplayMode = DisplayMode.Simulation;
 
     /**
      * Constructor to create the App object with an engine.
@@ -406,14 +411,25 @@ export class App {
 
     /**
      * Update HMD eye camera viewports when the window (browser) is resized.
+     * - if display mode is VR, the PIP viewports should fill the screen
      */
     updateHMDEyeCameraViewports() {
-        // calculate the PIP viewport parameters
-        const pipViewPortWidthPixels = this.pipViewPortWidth * this.engine.getRenderWidth();
-        const pipViewPortHeightPixels = pipViewPortWidthPixels / this.hmd.aspectRatioEye;
-        this.pipViewPortHeight = pipViewPortHeightPixels / this.engine.getRenderHeight();
-        this.pipViewPortX = 1 - this.pipViewPortWidth * 2;
-        this.pipViewPortY = 1 - this.pipViewPortHeight;
+        if (this.currDisplayMode === DisplayMode.VR) {
+            // In VR mode, each eye should fill half the screen horizontally
+            this.pipViewPortWidth = 0.5;
+            this.pipViewPortHeight = 1.0;
+            this.pipViewPortX = 0.0;
+            this.pipViewPortY = 0.0;
+        }
+        else {
+            // calculate the PIP viewport parameters
+            this.pipViewPortWidth = PIP_VIEWPORT_WIDTH;
+            const pipViewPortWidthPixels = this.pipViewPortWidth * this.engine.getRenderWidth();
+            const pipViewPortHeightPixels = pipViewPortWidthPixels / this.hmd.aspectRatioEye;
+            this.pipViewPortHeight = pipViewPortHeightPixels / this.engine.getRenderHeight();
+            this.pipViewPortX = 1 - this.pipViewPortWidth * 2;
+            this.pipViewPortY = 1 - this.pipViewPortHeight;
+        }
 
         // set the new viewport parameters
         this.hmd.camL.viewport.width = this.pipViewPortWidth;
@@ -466,5 +482,24 @@ export class App {
         // - when the PIP viewports are toggled off, the main camera should not render the HMD
         // - when the PIP viewports are toggled on, the main camera should render the HMD
         //this.camera.layerMask = 
+    }
+
+    /**
+     * Set the current display mode.
+     * - update the HMD eye camera viewports accordingly
+     * - change the layer mask so that only the eye cameras render in VR mode
+     * @param mode The display mode to set.
+     */
+    setDisplayMode(mode: DisplayMode) {
+        this.currDisplayMode = mode;
+        console.log(`Display mode set to: ${this.currDisplayMode}`);
+        this.updateHMDEyeCameraViewports();
+
+        // Update the layer masks based on the display mode
+        if (mode === DisplayMode.VR) {
+            this.camera.layerMask = LAYER_NONE;
+        } else {
+            this.camera.layerMask = LAYER_SCENE | LAYER_HMD | LAYER_FRUSTUM;
+        }
     }
 }

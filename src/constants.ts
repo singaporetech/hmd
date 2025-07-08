@@ -33,3 +33,12 @@ export const CAM_SPEED = 0.03;
 // Configuration for visualizations
 export const MESH_EDGE_WIDTH = 0.1;
 export const VIEWPORT_BORDER_THICKNESS = 3;
+
+// Configuration for the PIP view
+export const PIP_VIEWPORT_WIDTH = 0.25; // 25% of the screen width
+
+// Display mode
+export enum DisplayMode {
+    Simulation = "simulation",
+    VR = "vr",
+}

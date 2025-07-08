@@ -1,14 +1,20 @@
 /** 
  * @File This is the UI "layer".
  * @author Chek
+ *
+ * This file contains the UI class that creates the user interface for the application.
+ * It uses the Babylon.js GUI library.
+ *
+ * The UI includes:
+ * - sliders to control the HMD parameters
+ * - text blocks to display the HMD parameters and calculated values
+ * - buttons to toggle the frustum visualizers and PIP viewports
  */
 import { EventState, Scene, VirtualJoystick } from '@babylonjs/core';
-import { HMD } from './hmd';
-import { LAYER_UI } from './constants';
 import * as GUI from "@babylonjs/gui";
+import { HMD } from './hmd';
+import { LAYER_UI, VIEWPORT_BORDER_THICKNESS, DisplayMode} from './constants';
 import { App } from './app';
-import { VIEWPORT_BORDER_THICKNESS } from './constants';
-
 /**
  * The UI class to add UI controls to the scene.
  */
@@ -93,45 +99,6 @@ export class UI {
         statsPanel.paddingBottom = '20px';
         statsPanel.paddingLeft = '20px';
 
-        // create a text block for each HMD param
-        // - show the param name and value
-        // - dynamically update the value when the param changes
-        // TODO: the updating is very inefficient, but it's fine for now
-        //let displayParams = hmd.displayParams;
-        //for (const key in displayParams) {
-            //if (displayParams.hasOwnProperty(key)) {
-                //const textBlock = new GUI.TextBlock();
-                //const typedKey = key as keyof typeof displayParams;
-                //const value = displayParams[typedKey];
-
-                //// Ensure the value is numeric before using .toFixed(3)
-                //if (typeof value === 'number') {
-                    //textBlock.text = `${key}: ${value.toFixed(3)}`;
-                //} else {
-                    //textBlock.text = `${key}: ${value}`;
-                //}
-
-                //textBlock.height = '12px';
-                //textBlock.color = 'white';
-                //textBlock.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-                //statsPanel.addControl(textBlock);
-
-                //// update the text block when the param changes
-                //hmd.onValuesUpdatedObservable.add(() => {
-                    //// fetch the latest value
-                    //displayParams = hmd.displayParams;
-
-                    //// Ensure the value is numeric before using .toFixed(3)
-                    //const value = displayParams[typedKey];
-                    //if (typeof value === 'number') {
-                        //textBlock.text = `${key}: ${value.toFixed(3)}`;
-                    //} else {
-                        //textBlock.text = `${key}: ${value}`;
-                    //}
-                //});
-            //}
-        //}
-
         let displayCalculatedVals = hmd.displayCalculatedVals;
         for (const key in displayCalculatedVals) {
             if (displayCalculatedVals.hasOwnProperty(key)) {
@@ -182,10 +149,25 @@ export class UI {
         });
 
         // create a toggle button to show/hide the PIP viewports
-        const togglePIPButton = this.createToggleButton('HMD View', '#008080', () => {
-            app.togglePIPViewports();
+        //const togglePIPButton = this.createToggleButton('HMD View', '#008080', () => {
+            //app.togglePIPViewports();
+        //});
+        //buttonPanel.addControl(togglePIPButton);
+
+        // create display mode toggle button
+        let currentMode = DisplayMode.Simulation;
+        let toggleVRButton!: GUI.Button;
+        toggleVRButton = this.createToggleButton("VR", "#008080", () => {
+            currentMode = currentMode === 
+                DisplayMode.Simulation ? DisplayMode.VR : DisplayMode.Simulation;
+            //toggleVRButton.textBlock!.text = currentMode === 
+                //DisplayMode.VR ? "Exit VR" : "Enter VR";
+            app.setDisplayMode(currentMode);
+            
+            // need to update the PIP viewport rectangles
+            this.updatePIPViewPortBorder(app);
         });
-        buttonPanel.addControl(togglePIPButton);
+        buttonPanel.addControl(toggleVRButton);
 
         // Add frustum togglers
         buttonPanel.addControl(toggleFrustumL);
@@ -298,18 +280,31 @@ export class UI {
 
     /**
      * Update the PIP viewport border when the window (browser) is resized.
+     * - if isPIPEnabled, update the PIP viewport rectangles
+     * - else hide the PIP viewport rectangles
      */
     updatePIPViewPortBorder(app: App) {
-        // update the actual viewports first
-        app.updateHMDEyeCameraViewports();
+        if (app.currDisplayMode === DisplayMode.Simulation) {
+            // update the actual viewports first
+            app.updateHMDEyeCameraViewports();
 
-        // update the GUI rectangles
-        this.pipViewPortBorderL.width = `${app.pipViewPortWidth * 100}%`;
-        this.pipViewPortBorderL.height = `${app.pipViewPortHeight * 100}%`;
-        this.pipViewPortBorderL.left = `${app.pipViewPortX * 100}%`;
-        this.pipViewPortBorderR.width = `${app.pipViewPortWidth * 100}%`;
-        this.pipViewPortBorderR.height = `${app.pipViewPortHeight * 100}%`;
-        this.pipViewPortBorderR.left = `${app.pipViewPortX * 100 + app.pipViewPortWidth * 100}%`;
+            // update the GUI rectangles
+            this.pipViewPortBorderL.width = `${app.pipViewPortWidth * 100}%`;
+            this.pipViewPortBorderL.height = `${app.pipViewPortHeight * 100}%`;
+            this.pipViewPortBorderL.left = `${app.pipViewPortX * 100}%`;
+            this.pipViewPortBorderR.width = `${app.pipViewPortWidth * 100}%`;
+            this.pipViewPortBorderR.height = `${app.pipViewPortHeight * 100}%`;
+            this.pipViewPortBorderR.left = `${app.pipViewPortX * 100 + app.pipViewPortWidth * 100}%`;
+
+            // show the PIP viewport rectangles
+            this.pipViewPortBorderL.isVisible = true;
+            this.pipViewPortBorderR.isVisible = true;
+        }
+        else {
+            // hide the PIP viewport rectangles
+            this.pipViewPortBorderL.isVisible = false;
+            this.pipViewPortBorderR.isVisible = false;
+        }
     }
 
     /**
@@ -324,6 +319,5 @@ export class UI {
         joystick.setJoystickColor('red');
         return joystick;
     }
-
 
 }
