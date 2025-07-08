@@ -86,6 +86,20 @@ export class App {
     constructor(engine: Engine) {
         this.engine = engine;
 
+        // Register service worker (only in production builds)
+        if ('serviceWorker' in navigator && import.meta.env.PROD) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker
+                    .register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch((err) => {
+                        console.error('Service Worker registration failed:', err);
+                    });
+            });
+        }
+
         // register the SPLATFileLoader plugin
         SceneLoader.RegisterPlugin(new SPLATFileLoader());
     }
