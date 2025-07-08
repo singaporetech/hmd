@@ -26,7 +26,9 @@ export default defineConfig({
         },
         testTimeout: 60000,
     },
+    base: './',
     build: {
         outDir: 'docs'
     },
+    publicDir: 'public',
 });
