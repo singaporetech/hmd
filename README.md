@@ -63,9 +63,8 @@ You can inspect the `package.json` file to see other available scripts.
 
 # Architecture
 
-The application simply uses a 2-layer architecture: App and UI.
+The application simply uses a 2-layer architecture: App and UI:
 
-Draw UML diagram here:
 ```
  +-----------------+         +-----------------+
  |       App       | ---o)---|        UI       |

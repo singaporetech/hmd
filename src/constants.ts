@@ -8,6 +8,7 @@ import {Vector3} from "@babylonjs/core";
 // Use layer masks to control what is rendered by the cameras
 // - this is a bit mask, so we can combine the layers with bitwise OR
 //   e.g., to render the Scene and UI, we set the layerMask to 0x1 | 0x2 = 0x3
+//   - in case you forgot the bitwise OR: 0001 | 0010 = 0011
 // - 0x1: render the Scene
 // - 0x2: render the UI
 // - 0x3: render both the Scene and UI

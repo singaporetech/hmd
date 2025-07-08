@@ -3,44 +3,14 @@
  * @author Chek
  *
  * This app class implements the core logic for the web application.
+ * - creates the BabylonJS scene
+ * - manages the loaded environment (either primitives, or Gaussian Splat)
  * - contains the HMD and FrustumVisualizer components
  * - provides methods to UI to interact with the scene
+ *   - load next/previous environment
+ *   - toggle PIP viewports
+ *   - update HMD eye camera viewports
  *
- * In the web app is to illustrate how various hardware parameters in a VR HMD
- * affect the rendering of the virtual images for the left and right eyes.
- *
- * This will highlight the differences between the left and right eye images for:
- * - perspective projection frustums
- * - field of view (FOVs)
- * - lookat points
- *
- * The scene can be navigated using the main camera with wasd and mouse controls.
- *
- * Users can switch the scene environment to various gaussian splats.
- *
- * The eyes are be represented by two spheres, one for each eye.
- *
- * The HMD is a transparent box with a display screen and two lenses inside.
- * The parameters of the HMD can be adjusted through sliders:
- * - ipd: interpupillary distance
- * - eyeRelief: eye relief
- * - distLens2Display: distance from the display screen to the lenses
- * - displayWidth: width of the display screen
- * - displayHeight: height of the display screen
- * - f: focal length of the lenses
- * - etc.
- *
- * Some resultant calculated parameters are displayed:
- * - distLens2Img: distance from the lenses to the virtual image
- * - imgWidthL: width of the virtual image for the left eye
- * - imgHeightL: height of the virtual image for the left eye
- * - imgWidthR: width of the virtual image for the right eye
- * - imgHeightR: height of the virtual image for the right eye
- * - etc.
- *
- * The left/right frustums will dynamically adjust based on the parameters of the HMD.
- *
- * There will be an overlay on the screen to show the left and right eye rendered images.
  * Note that configuration params are in constants.ts.
  */
 
@@ -146,31 +116,6 @@ export class App {
         // Create shadow generator for the directional light
         this.shadowGenerator = new ShadowGenerator(1024, dirLight);
         this.shadowGenerator.useBlurExponentialShadowMap = true;
-    }
-
-    /**
-     * Construct an environment based on a pre-made model. 
-     * @param scene The scene to load the environment into.
-     * @param modelPath The path to the model to load.
-     *
-     * TODO potentially deprecate
-     */
-    private loadModel(scene: Scene, modelPath: string) {
-        this.loadLights(scene);
-
-        // Load the model
-        SceneLoader.ImportMeshAsync(
-            "env",
-            modelPath,
-            "",
-            scene
-        ).then((result) => {
-            // Set the layer mask for the model
-            result.meshes.forEach((mesh) => {
-                mesh.layerMask = LAYER_SCENE;
-                this.shadowGenerator.addShadowCaster(mesh);
-            });
-        });
     }
 
     /**
@@ -411,14 +356,6 @@ export class App {
         // envID 1 to maxEnvID are the Gaussian Splat environments
         const splatID = envID - 1;
 
-        //const splats = [
-            //"gs_Sqwakers_trimed.splat",
-            //"gs_Skull.splat",
-            //"gs_Plants.splat",
-            //"gs_Fire_Pit.splat",
-            //"Halo_Believe.splat",
-        //];
-
         const response = await fetch("assets/assets.json");
         const splatFilenames = await response.json();
         this.maxEnvID = splatFilenames.length + 1;
@@ -465,26 +402,6 @@ export class App {
                 // Set the layer mask for the Gaussian Splat
                 this.splatMesh.layerMask = LAYER_SCENE;
             });
-            //(meshes) => {
-                //// Set the position of the Gaussian Splat
-                //const mesh = meshes[0];
-                //mesh.position = new Vector3(0, 1, 0);
-                //mesh.layerMask = LAYER_SCENE;
-            //}
-        //);
-
-        //SceneLoader.ImportMeshAsync(
-            //"splat", 
-            //"https://assets.babylonjs.com/splats/", 
-            //"gs_Fire_Pit.splat", 
-            //scene)
-            //.then((result) => {
-                //// Set the position of the Gaussian Splat
-                //result.meshes[0].position = new Vector3(0, 0, 0);
-
-                //// Set the layer mask for the Gaussian Splat
-                //result.meshes[0].layerMask = LAYER_SCENE;
-            //});
     }
 
     /**
@@ -535,6 +452,8 @@ export class App {
      *   main viewport
      * - use the layer masks to control what is rendered
      * @param scene The scene to toggle the PIP viewports in.
+     *
+     * TODO remove the viewport borders as well
      */
     togglePIPViewports() {
         // toggle the layer masks for the HMD eye cameras
