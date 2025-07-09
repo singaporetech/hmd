@@ -94,7 +94,7 @@ export class HMD {
 
     // mock camera for user control
     isUserControlled = false;
-    private controlCam!: FreeCamera;
+    controlCam!: FreeCamera;
 
     // meshes for the display, lenses, and eyes
     // - using ! to suppress the error that the properties are not initialized
