@@ -369,7 +369,7 @@ export class HMD {
 
               if (corrected.x < 0.0 || corrected.x > 1.0 || 
                   corrected.y < 0.0 || corrected.y > 1.0) {
-                  gl_FragColor = vec4(0.0);
+                  gl_FragColor = vec4(0.55, 0.38, 0.4, 1.0); // color beyond bounds
               } else {
                   gl_FragColor = texture2D(textureSampler, corrected);
               }
