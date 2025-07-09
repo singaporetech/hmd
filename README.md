@@ -14,11 +14,11 @@ One of the current motivation is to support the YouTube tutorial: https://youtu.
 - Adjust the HMD parameters (IPD, eye relief, lens-to-display distance, etc.)
 - View how various calculated parameters (e.g., width/height of virtual image, FOVs, etc.) change as the HMD parameters change
 - Switch scenes across primitive scenes and open source gaussian splats
-- Toggle frustum visualization on/off
+- Enter into a "VR" mode that simulates the actual HMD view, allowing the user, when using a mobile device, to see the actual outputs in a Google Cardboard or similar HMD enclosure
 - Basic WASD + mouse camera movement
 
 ## Known Issues
-- Flickering in gaussian splat scenes due to rendering multiple 3DGS rendered viewport (temporary fix: click 'HMD View' button to disable rendering of eye cameras)
+- Gaussian splats are rendering blurry in the viewports
 - Large gaussian splats may not get cleared properly when rapidly switching scenes
 - etc.
 
