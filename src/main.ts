@@ -33,5 +33,4 @@ app.createScene().then(scene => {
 // resize the canvas when the window is resized
 window.addEventListener('resize', function () {
     engine.resize();
-    ui.updatePIPViewPortBorder(app)
 });

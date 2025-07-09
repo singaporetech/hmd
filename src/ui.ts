@@ -24,7 +24,7 @@ export class UI {
     private pipViewPortBorderR!: GUI.Rectangle;
 
     // VR centre line
-    private vrCenterMarker!: GUI.Image;
+    private vrCenterMarker!: GUI.Rectangle;
 
     /**
      * Create a new UI object.
@@ -68,7 +68,7 @@ export class UI {
                 slider.background = 'white';
                 slider.onValueChangedObservable.add((value) => {
                     hmd.setParam(key, value)
-                    this.updatePIPViewPortBorder(app);
+                    app.updateHMDEyeCameraViewports();
                 });
 
                 const textBlock = new GUI.TextBlock();
@@ -137,13 +137,15 @@ export class UI {
             }
         }
 
-        // create a rectangle to represent the VR centre lines// Create a thin horizontal line for VR alignment
-        this.vrCenterMarker = new GUI.Image("vrCentreMarker", "/icons/diamond.png");
-        this.vrCenterMarker.width = "50px";
-        this.vrCenterMarker.height = "50px";
+        // create a rectangle to represent the VR centre lines
+        this.vrCenterMarker = new GUI.Rectangle("vrCenterMarker");
+        this.vrCenterMarker.width = "2px";
+        this.vrCenterMarker.height = "70px";
+        this.vrCenterMarker.thickness = 0;
+        this.vrCenterMarker.background = "pink";
         this.vrCenterMarker.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         this.vrCenterMarker.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-        this.vrCenterMarker.top = "-90px"; // adjust if needed
+        this.vrCenterMarker.top = "-98px"; // adjust if needed
         this.vrCenterMarker.isVisible = false; // hidden by default
         advancedTexture.addControl(this.vrCenterMarker);
 
@@ -153,64 +155,39 @@ export class UI {
         buttonPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         buttonPanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
 
-        // Add the left and right frustum toggle buttons to the buttonPanel
+        // create display mode toggle button
+        let currentMode = DisplayMode.Simulation;
+        let toggleVRButton!: GUI.Button;
+        toggleVRButton = this.createToggleButton("VR", "#008080", () => {
+            currentMode = currentMode === DisplayMode.Simulation 
+                                          ? DisplayMode.VR 
+                                          : DisplayMode.Simulation;
+            app.setDisplayMode(currentMode);
+            
+            // update the viewports
+            app.updateHMDEyeCameraViewports();
+
+            // also update the VR centre line visibility
+            this.vrCenterMarker.isVisible = app.currDisplayMode === DisplayMode.VR;
+        });
+        buttonPanel.addControl(toggleVRButton);
+
+        // Add frustum togglers
+        // - the left and right frustum toggle buttons to the buttonPanel
         const toggleFrustumL = this.createToggleButton('Frustum L', '#8B0000', () => {
             app.frustumVisualizerL?.toggleVisibility();
         });
         const toggleFrustumR = this.createToggleButton('Frustum R', '#00008B', () => {
             app.frustumVisualizerR?.toggleVisibility();
         });
-
-        // create a toggle button to show/hide the PIP viewports
-        //const togglePIPButton = this.createToggleButton('HMD View', '#008080', () => {
-            //app.togglePIPViewports();
-        //});
-        //buttonPanel.addControl(togglePIPButton);
-
-        // create display mode toggle button
-        let currentMode = DisplayMode.Simulation;
-        let toggleVRButton!: GUI.Button;
-        toggleVRButton = this.createToggleButton("VR", "#008080", () => {
-            currentMode = currentMode === 
-                DisplayMode.Simulation ? DisplayMode.VR : DisplayMode.Simulation;
-            //toggleVRButton.textBlock!.text = currentMode === 
-                //DisplayMode.VR ? "Exit VR" : "Enter VR";
-            app.setDisplayMode(currentMode);
-            
-            // need to update the PIP viewport rectangles
-            this.updatePIPViewPortBorder(app);
-        });
-        buttonPanel.addControl(toggleVRButton);
-
-        // Add frustum togglers
         buttonPanel.addControl(toggleFrustumL);
         buttonPanel.addControl(toggleFrustumR);
 
         // Add the buttonPanel to the userPanel
         advancedTexture.addControl(buttonPanel)
 
-        // set border around PIP viewports using UI rectangles
-        this.pipViewPortBorderL = new GUI.Rectangle();        
-        this.pipViewPortBorderL.thickness = VIEWPORT_BORDER_THICKNESS;
-        this.pipViewPortBorderL.color = 'pink';
-        this.pipViewPortBorderL.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        this.pipViewPortBorderL.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        this.pipViewPortBorderR = new GUI.Rectangle();
-        this.pipViewPortBorderR.thickness = VIEWPORT_BORDER_THICKNESS;
-        this.pipViewPortBorderR.color = 'pink';
-        this.pipViewPortBorderR.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        this.pipViewPortBorderR.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        this.pipViewPortBorderL.cornerRadius = 3;
-        this.pipViewPortBorderR.cornerRadius = 3;
-        advancedTexture.addControl(this.pipViewPortBorderL);
-        advancedTexture.addControl(this.pipViewPortBorderR);
-        this.updatePIPViewPortBorder(app);
-
-        // TODO:
-        // add PIP viewport borders layerMask so that we can toggle them on/off when we turn off the PIP viewport rendering
-        // need to add a different advancedTexture for the PIP viewports
-
-        // add some textual instructions on top left to use WASD and mouse to move the camera
+        // add some textual instructions on top left to use WASD and 
+        // mouse to move the camera
         const instructions = new GUI.TextBlock();
         instructions.text = 'WASD and mouse to move camera';
         instructions.color = 'white';
@@ -238,14 +215,13 @@ export class UI {
         advancedTexture.addControl(instructionsBackground);
         advancedTexture.addControl(instructions);
 
-        // add leftbutton and rightbutton to a panel 20px from the previous buttonPanell
+        // add leftbutton and rightbutton to a panel 20px from the previous buttonPanel
         const envButtonPanel = new GUI.StackPanel();
         envButtonPanel.isVertical = false;
         envButtonPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         envButtonPanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
         envButtonPanel.width = '100px';
         envButtonPanel.height = '100px';
-        envButtonPanel.paddingRight = '5px';
         envButtonPanel.paddingBottom = '40px';
         advancedTexture.addControl(envButtonPanel);
 
@@ -262,7 +238,6 @@ export class UI {
         rightButton.width = '50px';
         envButtonPanel.addControl(leftButton);
         envButtonPanel.addControl(rightButton);
-
     }
 
     /** 
@@ -279,7 +254,8 @@ export class UI {
         button.cornerRadius = 3;
         button.thickness = 2;
         button.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-        button.paddingRight = '5px'
+        button.paddingLeft = '3px'
+        button.paddingRight = '3px'
         button.paddingBottom = '20px'
 
         const textBlock = new GUI.TextBlock();
@@ -289,38 +265,6 @@ export class UI {
         button.onPointerClickObservable.add(onClickHandler);
 
         return button;
-    }
-
-    /**
-     * Update the PIP viewport border when the window (browser) is resized.
-     * - if isPIPEnabled, update the PIP viewport rectangles
-     * - else hide the PIP viewport rectangles
-     */
-    updatePIPViewPortBorder(app: App) {
-        if (app.currDisplayMode === DisplayMode.Simulation) {
-            // update the actual viewports first
-            app.updateHMDEyeCameraViewports();
-
-            // update the GUI rectangles
-            this.pipViewPortBorderL.width = `${app.pipViewPortWidth * 100}%`;
-            this.pipViewPortBorderL.height = `${app.pipViewPortHeight * 100}%`;
-            this.pipViewPortBorderL.left = `${app.pipViewPortX * 100}%`;
-            this.pipViewPortBorderR.width = `${app.pipViewPortWidth * 100}%`;
-            this.pipViewPortBorderR.height = `${app.pipViewPortHeight * 100}%`;
-            this.pipViewPortBorderR.left = `${app.pipViewPortX * 100 + app.pipViewPortWidth * 100}%`;
-
-            // show the PIP viewport rectangles
-            this.pipViewPortBorderL.isVisible = true;
-            this.pipViewPortBorderR.isVisible = true;
-        }
-        else {
-            // hide the PIP viewport rectangles
-            this.pipViewPortBorderL.isVisible = false;
-            this.pipViewPortBorderR.isVisible = false;
-        }
-
-        // also update the VR centre line visibility
-        this.vrCenterMarker.isVisible = app.currDisplayMode === DisplayMode.VR;
     }
 
     /**
