@@ -16,6 +16,11 @@ import {
     MeshBuilder,
     Mesh,
     Observable,
+    RenderTargetTexture,
+    PostProcess,
+    Texture,
+    Engine,
+    Effect,
 } from "@babylonjs/core";
 import { LAYER_HMD, LAYER_SCENE, MESH_EDGE_WIDTH } from "./constants";
 
@@ -99,6 +104,10 @@ export class HMD {
     // mesh for the virtual image
     // TODO: think about how to show the virtual image
     private virtualImg!: Mesh;
+
+    // render targets for the left and right eyes
+    renderTargetL!: RenderTargetTexture;
+    renderTargetR!: RenderTargetTexture;
 
     /**
      * Get the aspect ratio of an eye's view.
@@ -300,7 +309,7 @@ export class HMD {
      * Create a new HMD with the given scene.
      * @param scene The scene to create the HMD in.
      */
-    constructor(scene: Scene) {
+    constructor(scene: Scene, engine: Engine) {
         this.scene = scene;
         
         // do first calculation of the projection matrix as it is needed
@@ -333,6 +342,68 @@ export class HMD {
         this.eyeL.layerMask = LAYER_HMD;
         this.eyeR.layerMask = LAYER_HMD;
         //this.virtualImg.layerMask = LAYER_HMD;
+        
+        // create render targets for the left and right eyes
+        this.renderTargetL = new RenderTargetTexture("renderTargetL", { width: 512, height: 512 }, scene, false);
+        this.renderTargetR = new RenderTargetTexture("renderTargetR", { width: 512, height: 512 }, scene, false);
+        this.renderTargetL.activeCamera = this.camL;
+        this.renderTargetR.activeCamera = this.camR;
+
+        // distortion fragment shader
+        Effect.ShadersStore["distortionFragmentShader"] = `
+          precision highp float;
+          varying vec2 vUV;
+          uniform sampler2D textureSampler;
+
+          // distortion params (tweak these)
+          const float k1 = 0.2;
+          const float k2 = 0.15;
+          const vec2 center = vec2(0.5, 0.5);
+
+          void main() {
+              vec2 uv = vUV;
+              vec2 delta = uv - center;
+              float r2 = dot(delta, delta);
+              vec2 distorted = delta * (1.0 + k1 * r2 + k2 * r2 * r2);
+              vec2 corrected = center + distorted;
+
+              if (corrected.x < 0.0 || corrected.x > 1.0 || 
+                  corrected.y < 0.0 || corrected.y > 1.0) {
+                  gl_FragColor = vec4(0.0);
+              } else {
+                  gl_FragColor = texture2D(textureSampler, corrected);
+              }
+          }
+        `;
+
+        const camLDistortion = new PostProcess(
+            "camLDistortion",
+            "distortion",  // must match the key used in ShadersStore *without* 'FragmentShader'
+            null,
+            null,
+            1.0,
+            this.camL,
+            Texture.BILINEAR_SAMPLINGMODE,
+            engine
+        );
+
+        const camRDistortion = new PostProcess(
+            "camLDistortion",
+            "distortion",  // must match the key used in ShadersStore *without* 'FragmentShader'
+            null,
+            null,
+            1.0,
+            this.camR,
+            Texture.BILINEAR_SAMPLINGMODE,
+            engine
+        );
+
+        // TODO adjustable uniforms for distortion
+        //camLDistortion.onApply = (effect: Effect) => {
+            //effect.setFloat2("center", 0.5, 0.5); // center of the texture
+            //effect.setFloat("k1", 0.2); // distortion coefficient
+            //effect.setFloat("k2", 0.15); // distortion coefficient
+        //};
     }
 
     /**

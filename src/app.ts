@@ -263,7 +263,7 @@ export class App {
         this.loadPrimitives(scene);
 
         // Create the HMD
-        this.hmd = new HMD(scene);
+        this.hmd = new HMD(scene, this.engine);
         
         // Set the viewports for the HMD eye cameras
         const pipViewPortWidthPixels = this.pipViewPortWidth * this.engine.getRenderWidth();
