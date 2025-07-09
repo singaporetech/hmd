@@ -312,7 +312,8 @@ export class App {
         guiCamera.viewport = new Viewport(0, 0, 1, 1);
 
         // Ensure this secondary camera renders over the main camera
-        scene.activeCameras = [this.camera, this.hmd.camL, this.hmd.camR, guiCamera]; // Render both cameras
+        scene.activeCameras = [this.camera, this.hmd.camL, this.hmd.camR, 
+                               guiCamera, this.hmd.controlCam]; // Render both cameras
 
         // get view and transform matrices from HMD
         let transformMat = this.hmd.transformMatrix;
@@ -335,15 +336,21 @@ export class App {
             scene
         );
 
-        // Create the scene animation by adding an observer just before rendering
+        // Add an observer as the render loop
         let elapsedSecs = 0.0;
         let animSpeed = .5;
         const newPos = this.hmd.pos.clone();
         scene.onBeforeRenderObservable.add(() => {
-            // move the HMD in a sine wave oscillation to show changes in the frustum
-            elapsedSecs += scene.getEngine().getDeltaTime() / 1000;
-            newPos.x = Math.sin(elapsedSecs * 0.1) * animSpeed;
-            this.hmd.updatePosition(newPos);
+            if (this.hmd.isUserControlled) {
+                // update the HMD position and rotation based on the camera
+                this.hmd.updatePositionByUser();
+            }
+            else {
+                // move the HMD in a sine wave oscillation to show changes in the frustum
+                elapsedSecs += scene.getEngine().getDeltaTime() / 1000;
+                newPos.x = Math.sin(elapsedSecs * 0.1) * animSpeed;
+                this.hmd.updatePosition(newPos);
+            }
 
             // update the frustum mesh using updated view matrices
             this.frustumVisualizerL?.updateFrustumMesh(
@@ -503,6 +510,7 @@ export class App {
      * - update the HMD eye camera viewports accordingly
      * - change the layer mask so that only the eye cameras render in VR mode
      * @param mode The display mode to set.
+     * TODO perhaps add another UI layer in VR mode
      */
     setDisplayMode(mode: DisplayMode) {
         this.currDisplayMode = mode;
@@ -515,5 +523,33 @@ export class App {
         } else {
             this.camera.layerMask = LAYER_SCENE | LAYER_HMD | LAYER_FRUSTUM;
         }
+    }
+
+    /**
+     * Toggle user control of either the HMD or the main free camera.
+     * - through WASD and mouse
+     */
+    toggleHMDControl() {
+        if (this.hmd.isUserControlled) {
+            // reattach the main camera controls
+            this.camera.attachControl(this.engine.getRenderingCanvas(), true);
+            this.camera.keysUp = [87]; // W
+            this.camera.keysDown = [83]; // S
+            this.camera.keysLeft = [65]; // A
+            this.camera.keysRight = [68]; // D
+            this.camera.speed = CAM_SPEED; // slow down the camera movement
+            this.camera.minZ = 0.01; // prevent camera from going to 0
+            this.camera.maxZ = 100;
+
+            // disable the HMD controls
+            this.hmd.setUserControl(false, this.engine);
+        } else {
+            // disable the main camera controls
+            this.camera.detachControl();
+
+            // enable the HMD controls
+            this.hmd.setUserControl(true, this.engine);
+        }
+        console.log(`HMD user control: ${this.hmd.isUserControlled}`);
     }
 }

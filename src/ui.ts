@@ -176,6 +176,7 @@ export class UI {
         // - the left and right frustum toggle buttons to the buttonPanel
         const toggleFrustumL = this.createToggleButton('Frustum L', '#8B0000', () => {
             app.frustumVisualizerL?.toggleVisibility();
+            hmd.debugPrintPositions();
         });
         const toggleFrustumR = this.createToggleButton('Frustum R', '#00008B', () => {
             app.frustumVisualizerR?.toggleVisibility();
@@ -186,23 +187,21 @@ export class UI {
         // Add the buttonPanel to the userPanel
         advancedTexture.addControl(buttonPanel)
 
-        // add some textual instructions on top left to use WASD and 
+        // add some textual instructions at bottom  to use WASD and 
         // mouse to move the camera
         const instructions = new GUI.TextBlock();
-        instructions.text = 'WASD and mouse to move camera';
+        instructions.text = 'WASD and mouse to move camera or HMD';
         instructions.color = 'white';
-        instructions.fontSize = '14px';
-        instructions.top = '200px';
-        instructions.left = '20px';
-        instructions.width = '235px';
-        instructions.height = '30px';
-        instructions.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        instructions.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        instructions.fontSize = '12px';
+        instructions.width = '250px';
+        instructions.height = '18px';
+        instructions.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        instructions.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
 
         // add a background to the instructions
         const instructionsBackground = new GUI.Rectangle();
         instructionsBackground.background = 'red'; // dark red
-        instructionsBackground.alpha = 0.1;
+        instructionsBackground.alpha = 0.2;
         instructionsBackground.thickness = 2;
         instructionsBackground.width = instructions.width;
         instructionsBackground.height = instructions.height;
@@ -238,6 +237,12 @@ export class UI {
         rightButton.width = '50px';
         envButtonPanel.addControl(leftButton);
         envButtonPanel.addControl(rightButton);
+
+        // create a button to toggle whether HMD is controlled by user
+        const toggleHMDControlButton = this.createToggleButton('Move HMD', '#008000', () => {
+            app.toggleHMDControl();
+        });
+        buttonPanel.addControl(toggleHMDControlButton);
     }
 
     /** 
@@ -260,6 +265,7 @@ export class UI {
 
         const textBlock = new GUI.TextBlock();
         textBlock.text = text;
+        textBlock.fontSize = '14px';
         button.addControl(textBlock);
 
         button.onPointerClickObservable.add(onClickHandler);
