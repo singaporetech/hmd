@@ -22,7 +22,7 @@ import {
     Engine,
     Effect,
 } from "@babylonjs/core";
-import { LAYER_HMD, LAYER_SCENE, MESH_EDGE_WIDTH } from "./constants";
+import { LAYER_NONE, LAYER_HMD, LAYER_SCENE, CAM_SPEED, MESH_EDGE_WIDTH } from "./constants";
 
 export class HMD {
     private scene: Scene;
@@ -91,6 +91,10 @@ export class HMD {
     // cameras for the left and right eyes
     camL: FreeCamera;
     camR: FreeCamera;
+
+    // mock camera for user control
+    isUserControlled = false;
+    private controlCam!: FreeCamera;
 
     // meshes for the display, lenses, and eyes
     // - using ! to suppress the error that the properties are not initialized
@@ -311,6 +315,12 @@ export class HMD {
      */
     constructor(scene: Scene, engine: Engine) {
         this.scene = scene;
+
+        // create the control camera
+        this.controlCam = new FreeCamera("hmdControlCam", this.pos.clone(), scene);
+        //this.controlCam.attachControl(this.engine.getRenderingCanvas(), true);
+        //this.controlCam.speed = 0.02; // set a slow speed for control
+        this.controlCam.layerMask = LAYER_NONE;
         
         // do first calculation of the projection matrix as it is needed
         this.calcProjectionMatrix();
@@ -355,7 +365,7 @@ export class HMD {
           varying vec2 vUV;
           uniform sampler2D textureSampler;
 
-          // distortion params (tweak these)
+          // distortion params (TODO make adjustable)
           const float k1 = 0.2;
           const float k2 = 0.15;
           const vec2 center = vec2(0.5, 0.5);
@@ -376,7 +386,8 @@ export class HMD {
           }
         `;
 
-        const camLDistortion = new PostProcess(
+        // create post process for the left cam using the distortion shader
+        new PostProcess(
             "camLDistortion",
             "distortion",  // must match the key used in ShadersStore *without* 'FragmentShader'
             null,
@@ -387,7 +398,8 @@ export class HMD {
             engine
         );
 
-        const camRDistortion = new PostProcess(
+        // create post process for the right cam using the distortion shader
+        new PostProcess(
             "camLDistortion",
             "distortion",  // must match the key used in ShadersStore *without* 'FragmentShader'
             null,
@@ -676,6 +688,16 @@ export class HMD {
     }
 
     /**
+     * Update the HMD position based on the control camera.
+     * - This is used when the HMD is in user control mode.
+     */
+    public updatePositionByUser() {
+        // update the HMD position based on the control camera position
+        this.updatePosition(this.controlCam.position);
+        //console.log("HMD position updated by user control camera:", this.pos);
+    }
+
+    /**
      * Update the eye position and target for the given camera.
      * @param camera The camera to update.
      * @param isLeftEye Whether the camera is the left eye.
@@ -698,5 +720,40 @@ export class HMD {
     onValuesUpdatedObservable = new Observable<void>();
     public notifyValuesUpdated() {
         this.onValuesUpdatedObservable.notifyObservers();
+    }
+
+    /**
+     * Set the user control mode for the HMD.
+     * @param isUserControlled Whether the HMD is in user control mode.
+     */
+    public setUserControl(isUserControlled: boolean, engine: Engine) {
+        this.isUserControlled = isUserControlled;
+        if (isUserControlled) {
+            this.controlCam.attachControl(engine.getRenderingCanvas(), true);
+            this.controlCam.keysUp = [87]; // W
+            this.controlCam.keysDown = [83]; // S
+            this.controlCam.keysLeft = [65]; // A
+            this.controlCam.keysRight = [68]; // D
+            this.controlCam.speed = CAM_SPEED; // slow down the camera movement
+            this.controlCam.minZ = 0.01; // prevent camera from going to 0
+            this.controlCam.maxZ = 100;
+        } else {
+            this.controlCam.detachControl();
+            //// reset the control camera position to the HMD position
+            //this.controlCam.position.copyFrom(this.pos);
+            //// also reset the control camera rotation to the HMD rotation
+            //this.controlCam.rotation.copyFromFloats(0, 0, 0);
+        }
+    }
+
+    /**
+     * Debug function to print the position of the HMD, the control camera, 
+     * and the eye positions.
+     */
+    public debugPrintPositions() {
+        console.log("HMD position:", this.pos.toString());
+        console.log("Control camera position:", this.controlCam.position.toString());
+        //console.log("Left eye position:", this.eyePosL);
+        //console.log("Right eye position:", this.eyePosR);
     }
 }
