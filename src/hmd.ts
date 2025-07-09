@@ -250,7 +250,6 @@ export class HMD {
 
         // notify observers that the values have been updated
         this.notifyValuesUpdated();
-
     }
 
     /**

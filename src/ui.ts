@@ -23,6 +23,9 @@ export class UI {
     private pipViewPortBorderL!: GUI.Rectangle;
     private pipViewPortBorderR!: GUI.Rectangle;
 
+    // VR centre line
+    private vrCenterMarker!: GUI.Image;
+
     /**
      * Create a new UI object.
      * @param hmd The HMD object to control.
@@ -133,6 +136,16 @@ export class UI {
                 });
             }
         }
+
+        // create a rectangle to represent the VR centre lines// Create a thin horizontal line for VR alignment
+        this.vrCenterMarker = new GUI.Image("vrCentreMarker", "/icons/diamond.png");
+        this.vrCenterMarker.width = "50px";
+        this.vrCenterMarker.height = "50px";
+        this.vrCenterMarker.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        this.vrCenterMarker.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+        this.vrCenterMarker.top = "-90px"; // adjust if needed
+        this.vrCenterMarker.isVisible = false; // hidden by default
+        advancedTexture.addControl(this.vrCenterMarker);
 
         // Create a horizontal StackPanel to hold both buttons side by side
         const buttonPanel = new GUI.StackPanel();
@@ -305,6 +318,9 @@ export class UI {
             this.pipViewPortBorderL.isVisible = false;
             this.pipViewPortBorderR.isVisible = false;
         }
+
+        // also update the VR centre line visibility
+        this.vrCenterMarker.isVisible = app.currDisplayMode === DisplayMode.VR;
     }
 
     /**
