@@ -155,9 +155,22 @@ export class HMD {
      * @returns The view matrix for the eye.
      */
     private getViewMatrix(isLeftEye: boolean) {
+
+
+        // this is redundant since setTarget already sets the view matrix
+        //const viewMatrix = Matrix.LookAtLH(eyePosition, lookAtPoint, up);
         const eyePos = isLeftEye ? this.eyePosL : this.eyePosR;
-        const lookAtPoint = eyePos.clone().add(new Vector3(0, 0, 1)); 
-        const up = Vector3.Up();
+        //const lookAtPoint = eyePos.clone().add(new Vector3(0, 0, 1)); 
+        //const up = Vector3.Up();
+
+
+        const camera: FreeCamera = isLeftEye ? this.camL : this.camR;
+        const direction = camera.getDirection(Vector3.Forward());
+        const lookAtPoint = eyePos.clone().add(direction);
+        //camera.setTarget(lookAtPoint);
+        const up = camera.getDirection(Vector3.Up());
+
+
         const viewMat = Matrix.LookAtLH(eyePos, lookAtPoint, up);
         return viewMat;
     }
@@ -268,10 +281,23 @@ export class HMD {
     /**
      * Update the eye positions based on the IPD and eye relief.
      * - this is called when the IPD or eye relief is changed
+     * - also called when user controls the HMD
+     *
+     * Note that we need to compute the offsets based on the position and orientation
+     * of the HMD, so that the eye positions are correct in world space.
      */
     private updateEyePos() {
-        this.eyePosL = this.pos.clone().add(new Vector3(-this.ipd / 2, 0, -this.distEye2Display));
-        this.eyePosR = this.pos.clone().add(new Vector3(this.ipd / 2, 0, -this.distEye2Display));
+        // compute local right and forward directions based on orientation of control camera
+        const right = this.controlCam.getDirection(Vector3.Right());
+        const forward = this.controlCam.getDirection(Vector3.Forward());
+
+        // compute eye offsets in local HMD space
+        const offsetRight = right.scale(this.ipd / 2);
+        const offsetForward = forward.scale(-this.distEye2Display);
+
+        // set the eye positions based on the offsets
+        this.eyePosL = this.pos.clone().add(offsetRight.negate()).add(offsetForward);
+        this.eyePosR = this.pos.clone().add(offsetRight).add(offsetForward);
     }
 
     /**
@@ -342,8 +368,8 @@ export class HMD {
         // set the projection matrix for the cameras
         this.camL.freezeProjectionMatrix(this.projMatL);
         this.camR.freezeProjectionMatrix(this.projMatR);
-        this.updateCamera2Eye(this.camL, true);
-        this.updateCamera2Eye(this.camR, false);
+        this.updateCamera2EyePos(this.camL, true);
+        this.updateCamera2EyePos(this.camR, false);
 
         // set meshes layer mask to not be rendered in the HMD eye cameras
         this.display.layerMask = LAYER_HMD
@@ -683,18 +709,36 @@ export class HMD {
         this.updateEyePos();
 
         // Update the camera positions
-        this.updateCamera2Eye(this.camL, true);
-        this.updateCamera2Eye(this.camR, false);
+        this.updateCamera2EyePos(this.camL, true);
+        this.updateCamera2EyePos(this.camR, false);
+    }
+
+    /**
+     * Update the HMD orientation.
+     */
+    public updateOrientation(newRot: Vector3) {
+        // Update the display rotation
+        this.display.rotation.copyFromFloats(newRot.x, newRot.y, newRot.z);
+
+        // Update the camera rotations
+        this.camL.rotation.copyFromFloats(newRot.x, newRot.y, newRot.z);
+        this.camR.rotation.copyFromFloats(newRot.x, newRot.y, newRot.z);
+
+        this.updateCamera2EyePos(this.camL, true);
+        this.updateCamera2EyePos(this.camR, false);
     }
 
     /**
      * Update the HMD position based on the control camera.
      * - This is used when the HMD is in user control mode.
      */
-    public updatePositionByUser() {
+    public updateTransformByUser() {
         // update the HMD position based on the control camera position
         this.updatePosition(this.controlCam.position);
         //console.log("HMD position updated by user control camera:", this.pos);
+        
+        // update the HMD orientation based on the control camera rotation
+        this.updateOrientation(this.controlCam.rotation);
     }
 
     /**
@@ -702,16 +746,10 @@ export class HMD {
      * @param camera The camera to update.
      * @param isLeftEye Whether the camera is the left eye.
      */
-    private updateCamera2Eye(camera: FreeCamera, isLeftEye: boolean) {
+    private updateCamera2EyePos(camera: FreeCamera, isLeftEye: boolean) {
         // update position
         const eyePosition = isLeftEye ? this.eyePosL : this.eyePosR;
         camera.position.copyFrom(eyePosition);
-
-        // Override getViewMatrix to return the custom view matrix
-        const viewMatrix = isLeftEye ? this.viewMatrixL : this.viewMatrixR;
-        camera.getViewMatrix = function() {
-            return viewMatrix;
-        };
     }
 
     /**
@@ -756,4 +794,22 @@ export class HMD {
         //console.log("Left eye position:", this.eyePosL);
         //console.log("Right eye position:", this.eyePosR);
     }
+
+    /**
+     * Get projection matrices for the left and right eyes.
+     * @param isLeftEye Whether to get the left eye projection matrix.
+     * @return The projection matrix for the left or right eye.
+     */
+    public getProjectionMatrix(isLeftEye: boolean): Matrix {
+        return isLeftEye ? this.projMatL : this.projMatR;
+    }
+
+    /**
+     * Get view matrices for the left and right eyes.
+     * @param isLeftEye Whether to get the left eye view matrix.
+     * @return The view matrix for the left or right eye.
+     */
+    //public getViewMatrix(isLeftEye: boolean): Matrix {
+        //return isLeftEye ? this.viewMatrixL : this.viewMatrixR;
+    //}
 }
