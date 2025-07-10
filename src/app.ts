@@ -343,7 +343,7 @@ export class App {
         scene.onBeforeRenderObservable.add(() => {
             if (this.hmd.isUserControlled) {
                 // update the HMD position and rotation based on the camera
-                this.hmd.updatePositionByUser();
+                this.hmd.updateTransformByUser();
             }
             else {
                 // move the HMD in a sine wave oscillation to show changes in the frustum
