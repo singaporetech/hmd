@@ -40,23 +40,32 @@ export class HMD {
      *   displayWidth: 120.96mm
      *   displayHeight: 68.03mm
      *   lensDiameter: 34mm
-     *
+     * 
      * The f and distLens2Display are usually determined in a manner to 
      * create a distEye2Img (focal distance) of around 1-2m for a comfortable 
      * viewing experience.
      */
     pos = new Vector3(0, .1, -.5);
-    f = .04;
-    ipd = .06;
     eyeRelief = .018;
-    distLens2Display = .039;
-    displayWidth = 0.12096;
-    displayHeight = .06803;
     displayDepth = .005;
     lensDiameter = .034;
     lensDepth = .005;
     eyeDiameter = .015;
     farFromNear = 1;
+    //ipd = .06;
+    //f = .04;
+    //distLens2Display = .039;
+    //displayWidth = 0.12096;
+    //displayHeight = .06803;
+
+    /**
+     * The cardboard from shopee:
+     */ 
+    ipd = 0.065
+    f = 0.043;
+    distLens2Display = 0.042;
+    displayWidth = 0.142;
+    displayHeight = 0.065;
 
     // Calculated values
     distEye2Display!: number;
