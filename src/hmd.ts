@@ -47,6 +47,8 @@ export class HMD {
      */
     pos = new Vector3(0, .1, -.5);
     eyeRelief = .018;
+    displayWidth = 0.12096;
+    displayHeight = .06803;
     displayDepth = .005;
     lensDiameter = .034;
     lensDepth = .005;
@@ -55,8 +57,6 @@ export class HMD {
     //ipd = .06;
     //f = .04;
     //distLens2Display = .039;
-    //displayWidth = 0.12096;
-    //displayHeight = .06803;
 
     /**
      * The cardboard from shopee:
@@ -64,8 +64,6 @@ export class HMD {
     ipd = 0.065
     f = 0.043;
     distLens2Display = 0.042;
-    displayWidth = 0.142;
-    displayHeight = 0.065;
 
     // Calculated values
     distEye2Display!: number;
