@@ -385,28 +385,54 @@ export class HMD {
         this.renderTargetL.activeCamera = this.camL;
         this.renderTargetR.activeCamera = this.camR;
 
-        // distortion fragment shader
+        // Register the shader source in Babylon.js' Effect store
+        // - this is GLSL code for the distortion shader
+        // TODO expose the distortion parameters in the UI
         Effect.ShadersStore["distortionFragmentShader"] = `
+
+          // Use high precision for float calculations (important for distortion)
           precision highp float;
+
+          // Interpolated UV coordinates passed from vertex shader
           varying vec2 vUV;
+
+          // Sampler for the original rendered texture
           uniform sampler2D textureSampler;
 
-          // distortion params (TODO make adjustable)
-          const float k1 = 0.2;
-          const float k2 = 0.15;
+          // --- Distortion Parameters ---
+
+          // Barrel distortion coefficients based on cardboard v2
+          const float k1 = 0.34;
+          const float k2 = 0.55;
+          //const float k1 = 0.2;
+          //const float k2 = 0.15;
+
+          // Center of the lens distortion (typically center of screen or viewport)
           const vec2 center = vec2(0.5, 0.5);
 
           void main() {
+              // Get the current UV coordinate
               vec2 uv = vUV;
+
+              // Compute offset from the distortion center
               vec2 delta = uv - center;
+
+              // Compute squared radius (distance from center)
               float r2 = dot(delta, delta);
+
+              // Apply radial distortion model: r * (1 + k1*r^2 + k2*r^4)
               vec2 distorted = delta * (1.0 + k1 * r2 + k2 * r2 * r2);
+
+              // Shift distorted delta back to UV space
               vec2 corrected = center + distorted;
 
+              // If corrected coordinate is out of bounds, draw a fallback color
               if (corrected.x < 0.0 || corrected.x > 1.0 || 
                   corrected.y < 0.0 || corrected.y > 1.0) {
-                  gl_FragColor = vec4(0.55, 0.38, 0.4, 1.0); // color beyond bounds
+                  // Fallback color (greyish pink), used beyond the warped area
+                  gl_FragColor = vec4(0.55, 0.38, 0.4, 1.0);
               } else {
+                  // Sample the distorted texture normally
                   gl_FragColor = texture2D(textureSampler, corrected);
               }
           }
