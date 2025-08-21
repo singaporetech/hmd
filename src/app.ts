@@ -381,12 +381,10 @@ export class App {
       this.frustumVisualizerL?.updateFrustumMesh(
         this.hmd.projMatL,
         this.hmd.viewMatrixL,
-        transformMat,
       );
       this.frustumVisualizerR?.updateFrustumMesh(
         this.hmd.projMatR,
         this.hmd.viewMatrixR,
-        transformMat,
       );
     });
 
