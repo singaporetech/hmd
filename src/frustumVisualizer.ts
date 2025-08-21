@@ -1,297 +1,240 @@
 /**
- * @file FrustumVisualizer class for visualizing the frustum of a camera.
+ * @file FrustumVisualizer class for visualizing a camera frustum using tubes.
  * @author Chek
- * @lastUpdated 28 Oct 2024
  *
- * This class is used to visualize the frustum of a camera in the scene.
+ * This class implements the frustum visualization as 3D tube meshes.
+ * - calculates the frustum corners in world space from projection and view matrices
+ * - constructs 12 tubes to represent the edges of the frustum
+ * - uses a shared unlit emissive material to ensure visibility independent of lighting
+ * - supports runtime updates:
+ *   - update frustum geometry when matrices change
+ *   - adjust tube thickness
+ *   - change emissive color
+ *   - toggle visibility
+ *
+ * Note:
+ * - Tubes respect depth testing (if the environment writes depth).
+ * - Layer mask and rendering group can be controlled for compatibility with HMD rendering
+ *   and splat/primitive scenes.
  */
-import {
-    Matrix,
-    Mesh,
-    MeshBuilder,
-    Scene,
-    Vector3,
-    VertexBuffer,
-} from "@babylonjs/core";
 
+import {
+  Color3,
+  Constants,
+  Matrix,
+  Mesh,
+  MeshBuilder,
+  Scene,
+  StandardMaterial,
+  Vector3,
+} from "@babylonjs/core";
 import { LAYER_FRUSTUM } from "./constants";
 
 export class FrustumVisualizer {
-    private frustumMesh: Mesh;
-    private scene: Scene;
+  private scene: Scene;
+  private tubeMeshes: Mesh[] = []; // 12 tubes, one per edge
+  private material: StandardMaterial; // shared unlit emissive
+  private tubeRadius = 0.0015; // default thickness (world units)
 
-    /**
-     * Builds a new FrustumVisualizer with projection and view matrices.
-     * @param projMat The projection matrix to calculate the frustum corners for.
-     * @param viewMat The view matrix to calculate the frustum corners for.
-     * @param transformMat The transform matrix to calculate the frustum corners for.
-     * @param scene The scene to add the frustum mesh to.
-     */
-    constructor(
-        projMat: Matrix,
-        viewMat: Matrix,
-        transformMat: Matrix,
-        scene: Scene
-    ) {
-        this.frustumMesh = this.createFrustumMesh(
-            projMat,
-            viewMat,
-            transformMat,
-            scene
-        );
-        this.scene = scene;
+  /**
+   * Constructs a frustum visualizer that renders edges as tubes.
+   * @param projMat The projection matrix used to compute the frustum corners.
+   * @param viewMat The view matrix used to compute the frustum corners.
+   * @param scene The Babylon.js scene to attach the meshes and material to.
+   */
+  constructor(projMat: Matrix, viewMat: Matrix, scene: Scene) {
+    this.scene = scene;
 
-        // set the layer mask to not be rendered by the HMD eye cameras
-        this.frustumMesh.layerMask = LAYER_FRUSTUM;
+    // Unlit emissive material so it stays bright regardless of lighting
+    this.material = new StandardMaterial("frustumMat", scene);
+    this.material.emissiveColor = Color3.White();
+    this.material.disableLighting = true;
+    this.material.alphaMode = Constants.ALPHA_DISABLE;
+
+    // Depth write ON so it can occlude/occluded normally (if splat pass writes depth)
+    this.material.disableDepthWrite = false;
+
+    // Build tubes
+    const corners = this.calculateFrustumCorners(projMat, viewMat);
+    this.tubeMeshes = this.buildTubes(corners);
+
+    // Keep off HMD eye cameras
+    this.setLayerMask(LAYER_FRUSTUM);
+  }
+
+  /**
+   * Updates the tube geometry when the frustum matrices change.
+   * @param projMat The new projection matrix.
+   * @param viewMat The new view matrix.
+   */
+  public updateFrustumMesh(projMat: Matrix, viewMat: Matrix) {
+    const corners = this.calculateFrustumCorners(projMat, viewMat);
+    const edgePairs = this.getEdgePairs();
+
+    // Update existing tubes in place
+    if (this.tubeMeshes.length !== edgePairs.length) {
+      this.disposeMeshesOnly();
+      this.tubeMeshes = this.buildTubes(corners);
+      return;
     }
 
-    /**
-     * Calculate the corners of the frustum in world space.
-     * @param projMat The projection matrix to calculate the frustum corners for.
-     * @param viewMat The view matrix to calculate the frustum corners for.
-     * @param transformMat The transform matrix to calculate the frustum corners for.
-     * @returns The corners of the frustum in local space.
-     *
-     * In a typical 3D graphics pipeline, the frustum is defined in clip space (NDC).
-     * To get the corners of the frustum in world space, we need to transform the corners
-     * from clip space to view space, and then from view space to world space.
-     *
-     * In the normal pipeline, for a given point P in the scene, the transformation is:
-     * P_clip = projMat * viewMat * transformMat * P
-     *
-     * Given the clip space coords, to get back the original P in the scene, we need to
-     * invert the above transformation:
-     * P = invTransformMat * invViewMat * invProjMat * P_clip
-     *
-     * Here we are not getting a point P in the scene, but the corners of the frustum.
-     * The corners of the frustum is always the extreme points of the frustum in clip space.
-     *
-     * Also, we are not getting the local coords, but the world coords, so we leave out the
-     * invTransformMat in the calculation.
-     * P_world = invViewMat * invProjMat * P_clip
-     *
-     * Note: clip space is the step before the perspective divide, where the
-     * coordinates are in the range [-1, 1] in all dimensions. To perform the final step from
-     * clip space to screen space, the coordinates are divided by the w component, then mapped
-     * according to the viewport dimensions.
-     *
-     * TODO: remove transformMat when concepts are confirmed
-     */
-    private calculateFrustumCorners(
-        projMat: Matrix,
-        viewMat: Matrix,
-        transformMat: Matrix
-    ) {
-        // Define corners in clip space (NDC)
-        const clipCorners = [
-            new Vector3(-1, 1, -1), // Top Left near
-            new Vector3(1, 1, -1), // Top Right near
-            new Vector3(-1, -1, -1), // Bottom Left near
-            new Vector3(1, -1, -1), // Bottom Right near
-            new Vector3(-1, 1, 1), // Top Left far
-            new Vector3(1, 1, 1), // Top Right far
-            new Vector3(-1, -1, 1), // Bottom Left far
-            new Vector3(1, -1, 1), // Bottom Right far
-        ];
-
-        // calculate the inverse of the projection and view matrices
-        const invProjMat = Matrix.Invert(projMat);
-        const invViewMat = Matrix.Invert(viewMat);
-        const invTransformMat = Matrix.Invert(transformMat);
-
-        // transform the corners to world space
-        return clipCorners.map((clipCorner) => {
-            // transform corner coords from clip space to view space
-            const viewCorner = Vector3.TransformCoordinates(
-                clipCorner,
-                invProjMat
-            );
-
-            // transform corner coords from view space to world space
-            const worldCorner = Vector3.TransformCoordinates(
-                viewCorner,
-                invViewMat
-            );
-
-            // transform corner coords from world space to local space
-            //const localCorner = Vector3.TransformCoordinates(
-                //worldCorner,
-                //invTransformMat
-            //);
-
-            // we are not interested in local space, so return world space
-            return worldCorner;
-        });
+    for (let i = 0; i < edgePairs.length; i++) {
+      const [a, b] = edgePairs[i];
+      MeshBuilder.CreateTube(
+        this.tubeMeshes[i].name,
+        {
+          path: [corners[a], corners[b]],
+          radius: this.tubeRadius,
+          updatable: true,
+          instance: this.tubeMeshes[i],
+          tessellation: 8,
+        },
+        this.scene,
+      );
     }
+  }
 
-    public updateOrCreateFrustum(
-        projMat: Matrix,
-        viewMat: Matrix,
-        transformMat: Matrix
-    ) {
-        const corners = this.calculateFrustumCorners(
-            projMat,
-            viewMat,
-            transformMat
-        );
+  /**
+   * Sets the tube thickness (world units). Call updateFrustumMesh to apply.
+   * @param radius The tube radius to use for all edges.
+   */
+  public setThickness(radius: number) {
+    this.tubeRadius = Math.max(1e-6, radius);
+  }
 
-        const lines = [];
-        lines.push(
-            [corners[0], corners[1]],
-            [corners[1], corners[3]],
-            [corners[3], corners[2]],
-            [corners[2], corners[0]],
-            [corners[4], corners[5]],
-            [corners[5], corners[7]],
-            [corners[7], corners[6]],
-            [corners[6], corners[4]],
-            [corners[0], corners[4]],
-            [corners[1], corners[5]],
-            [corners[2], corners[6]],
-            [corners[3], corners[7]]
-        );
+  /**
+   * Sets the emissive color of the shared frustum material.
+   * @param color The color to apply as emissive.
+   */
+  public setEmissiveColor(color: Color3) {
+    this.material.emissiveColor = color.clone();
+  }
 
-        if (!this.frustumMesh) {
-            this.frustumMesh = MeshBuilder.CreateLineSystem(
-                "frustum",
-                { lines },
-                this.scene
-            );
-        } else {
-            const linesVertices = this.frustumMesh.getVerticesData(
-                VertexBuffer.PositionKind
-            );
-            if (linesVertices) {
-                let idx = 0;
-                corners.forEach((corner) => {
-                    linesVertices[idx++] = corner.x;
-                    linesVertices[idx++] = corner.y;
-                    linesVertices[idx++] = corner.z;
-                });
+  /**
+   * Sets visibility for all frustum tubes.
+   * @param isVisible Whether the frustum should be visible.
+   */
+  public setVisibility(isVisible: boolean) {
+    for (const t of this.tubeMeshes) t.isVisible = isVisible;
+  }
 
-                this.frustumMesh.setVerticesData(
-                    VertexBuffer.PositionKind,
-                    linesVertices
-                );
-            }
-        }
+  /**
+   * Toggles visibility of the frustum tubes.
+   */
+  public toggleVisibility() {
+    const vis = this.tubeMeshes.some((t) => t.isVisible);
+    this.setVisibility(!vis);
+  }
+
+  /**
+   * Assigns a rendering group ID to all frustum tubes.
+   * @param id The rendering group ID to set.
+   */
+  public setRenderingGroupId(id: number) {
+    for (const t of this.tubeMeshes) t.renderingGroupId = id;
+  }
+
+  /**
+   * Sets the layer mask for all frustum tubes.
+   * @param mask The layer mask to apply.
+   */
+  public setLayerMask(mask: number) {
+    for (const t of this.tubeMeshes) t.layerMask = mask;
+  }
+
+  /**
+   * Disposes the frustum meshes and shared material.
+   */
+  public dispose() {
+    this.disposeMeshesOnly();
+    this.material.dispose();
+  }
+
+  // ==== internals ===========================================================
+
+  /**
+   * Helper to dispose only the tube meshes (keeps the material alive).
+   */
+  private disposeMeshesOnly() {
+    for (const t of this.tubeMeshes) t.dispose();
+    this.tubeMeshes = [];
+  }
+
+  /**
+   * Helper to build the 12 tube meshes from corner positions.
+   * @param corners The eight frustum corners in world space.
+   * @returns An array of tube meshes, one per edge.
+   */
+  private buildTubes(corners: Vector3[]) {
+    const tubes: Mesh[] = [];
+    let idx = 0;
+    for (const [a, b] of this.getEdgePairs()) {
+      const tube = MeshBuilder.CreateTube(
+        `frLine_${idx++}`,
+        {
+          path: [corners[a], corners[b]],
+          radius: this.tubeRadius,
+          updatable: true,
+          tessellation: 8,
+        },
+        this.scene,
+      );
+      tube.material = this.material;
+      tube.isPickable = false;
+      // Note: don’t force renderingGroupId; leave it to default unless you set it via setter.
+      tubes.push(tube);
     }
+    return tubes;
+  }
 
-    // Create lines to represent the frustum box
-    private createFrustumMesh( projMat: Matrix, viewMat: Matrix, transformMat: Matrix,
-        scene: Scene
-    ) {
-        const corners = this.calculateFrustumCorners(
-            projMat,
-            viewMat,
-            transformMat
-        );
+  /**
+   * Helper to list the 12 frustum edge index pairs.
+   * @returns An array of index pairs, each referencing two corner indices.
+   */
+  private getEdgePairs(): Array<[number, number]> {
+    // 8 corners: 0..3 near, 4..7 far (same ordering as your original)
+    return [
+      // near
+      [0, 1],
+      [1, 3],
+      [3, 2],
+      [2, 0],
+      // far
+      [4, 5],
+      [5, 7],
+      [7, 6],
+      [6, 4],
+      // connections
+      [0, 4],
+      [1, 5],
+      [2, 6],
+      [3, 7],
+    ];
+  }
 
-        const lines = [];
+  /**
+   * Helper to compute the eight frustum corners in world space.
+   * @param projMat The projection matrix used to compute corners.
+   * @param viewMat The view matrix used to compute corners.
+   * @returns An array of eight Vector3 positions in world space.
+   */
+  private calculateFrustumCorners(projMat: Matrix, viewMat: Matrix) {
+    const clipCorners = [
+      new Vector3(-1, 1, -1),
+      new Vector3(1, 1, -1),
+      new Vector3(-1, -1, -1),
+      new Vector3(1, -1, -1),
+      new Vector3(-1, 1, 1),
+      new Vector3(1, 1, 1),
+      new Vector3(-1, -1, 1),
+      new Vector3(1, -1, 1),
+    ];
+    const invProj = Matrix.Invert(projMat);
+    const invView = Matrix.Invert(viewMat);
 
-        // Connect near plane
-        lines.push(
-            [corners[0], corners[1]],
-            [corners[1], corners[3]],
-            [corners[3], corners[2]],
-            [corners[2], corners[0]]
-        );
-
-        // Connect far plane
-        lines.push(
-            [corners[4], corners[5]],
-            [corners[5], corners[7]],
-            [corners[7], corners[6]],
-            [corners[6], corners[4]]
-        );
-
-        // Connect near and far planes
-        lines.push(
-            [corners[0], corners[4]],
-            [corners[1], corners[5]],
-            [corners[2], corners[6]],
-            [corners[3], corners[7]]
-        );
-        
-        return MeshBuilder.CreateLineSystem("frustum", { lines }, scene);
-    }
-
-    public updateFrustumMesh(
-        projMat: Matrix,
-        viewMat: Matrix,
-        transformMat: Matrix
-    ) {
-        // calculate new corners
-        const corners = this.calculateFrustumCorners(
-            projMat,
-            viewMat,
-            transformMat
-        );
-
-        // get current frustum lines
-        const linesVertices = this.frustumMesh.getVerticesData("position");
-
-        // Define the mapping of `linesVertices` indices to `corners` indices
-        const indexMapping = [
-            // near plane
-            [0, 0],
-            [3, 1],
-            [6, 1],
-            [9, 3],
-            [12, 3],
-            [15, 2],
-            [18, 2],
-            [21, 0],
-
-            // far plane
-            [24, 4],
-            [27, 5],
-            [30, 5],
-            [33, 7],
-            [36, 7],
-            [39, 6],
-            [42, 6],
-            [45, 4],
-
-            // near to far plane
-            [48, 0],
-            [51, 4],
-            [54, 1],
-            [57, 5],
-            [60, 2],
-            [63, 6],
-            [66, 3],
-            [69, 7],
-        ];
-
-        // Update frustum lines
-        if (linesVertices) {
-            indexMapping.forEach(([lineIndex, cornerIndex]) => {
-                linesVertices[lineIndex] = corners[cornerIndex].x;
-                linesVertices[lineIndex + 1] = corners[cornerIndex].y;
-                linesVertices[lineIndex + 2] = corners[cornerIndex].z;
-            });
-
-            // Update the frustum mesh with the new lines
-            this.frustumMesh.setVerticesData(
-                VertexBuffer.PositionKind,
-                linesVertices
-            );
-        }
-    }
-
-    /**
-     * Set visibility of the frustum mesh.
-     * @param isVisible The visibility of the frustum mesh.
-     */
-    public setVisibility(isVisible: boolean) {
-        this.frustumMesh.isVisible = isVisible;
-    }
-
-    /**
-     * Toggle the visibility of the frustum mesh.
-     */
-    public toggleVisibility() {
-        this.frustumMesh.isVisible = !this.frustumMesh.isVisible;
-    }
+    return clipCorners.map((c) => {
+      const view = Vector3.TransformCoordinates(c, invProj);
+      return Vector3.TransformCoordinates(view, invView); // world space
+    });
+  }
 }
