@@ -57,12 +57,13 @@ export class HMD {
   pos = new Vector3(0, 0.1, -0.5);
   eyeRelief = 0.018;
   displayWidth = 0.12096;
-  displayHeight = 0.06803;
+  // displayHeight = 0.06803;
+  displayHeight = 0.068;
   displayDepth = 0.005;
   lensDiameter = 0.034;
   lensDepth = 0.005;
   eyeDiameter = 0.015;
-  farFromNear = 1;
+  farFromNear = 1.5;
   //ipd = .06;
   //f = .04;
   //distLens2Display = .039;

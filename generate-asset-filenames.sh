@@ -44,6 +44,9 @@ process_files "splat"
 # Process .ply files
 process_files "ply"
 
+# Process .spz files
+process_files "spz"
+
 # If no files were found, output an empty JSON array
 if [ "$FIRST" = true ]; then
     echo "[]" > "$OUTPUT_FILE"

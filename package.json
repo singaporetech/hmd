@@ -21,10 +21,10 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@babylonjs/core": "^8.23.1",
-        "@babylonjs/gui": "^8.23.1",
-        "@babylonjs/loaders": "^8.23.1",
-        "@babylonjs/materials": "^8.23.1",
+        "@babylonjs/core": "^8.26.1",
+        "@babylonjs/gui": "^8.26.1",
+        "@babylonjs/loaders": "^8.26.1",
+        "@babylonjs/materials": "^8.26.1",
         "@types/node": "^22.10.2",
         "babylonjs": "^7.28.0"
     },
