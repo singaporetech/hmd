@@ -8,6 +8,11 @@ One of the current motivation is to support the YouTube tutorial: https://youtu.
 
 # Project Status
 
+Do note that this is a project meant for learning and experimentation. There many assumptions and simplifications made in the implementation.
+- The lens is a simple uniform shape on both sides (for a more realistic lens, refer to Meta's ancient [DK2 specification](https://github.com/facebookarchive/RiftDK2/blob/master/Headset/Optical/DK2_Optical_Design.pdf))
+- The lens distortion is a fixed shader that does not take into account the actual lens parameters (this is on the roadmap)
+
+
 ## Current Features
 - Simulate a VR HMD's rendering of a scene in the two eye cameras
 - Visualize the frustum of the eye cameras
@@ -18,7 +23,6 @@ One of the current motivation is to support the YouTube tutorial: https://youtu.
 - Basic WASD + mouse camera movement
 
 ## Known Issues
-- Gaussian splats are rendering blurry in the viewports
 - Large gaussian splats may not get cleared properly when rapidly switching scenes
 - etc.
 
@@ -27,7 +31,7 @@ One of the current motivation is to support the YouTube tutorial: https://youtu.
 ### Short-term
 - Fix critical bugs
 - Add rendering of the virtual image planes
-- Add lens distortion shader to counteract the real lens's barrel distortion (using lens params from Cardboard spec)
+- Update lens distortion shader to counteract the real lens's barrel distortion (using lens params from Cardboard spec)
 
 ### Mid-term
 - Create a VR mode that renders the HMD View prior to applying real lens optics. This will allow user to see the actual outputs in a Google Cardboard or similar HMD.
