@@ -286,6 +286,12 @@ export class App {
 
     this.loadPrimitives(scene);
 
+    // calculate the maxEnvID
+    // TODO: refactor this duplication for perf
+    const response = await fetch("assets/assets.json");
+    const splatFilenames = await response.json();
+    this.maxEnvID = splatFilenames.length + 1;
+
     // Create the HMD
     this.hmd = new HMD(scene, this.engine);
 
@@ -503,11 +509,31 @@ export class App {
     this.disposeEnvObjects(scene);
 
     // load the next environment
+    // if (isNext) {
+    //   this.envID = (this.envID + 1) % this.maxEnvID;
+    // } else {
+    //   this.envID = (this.envID - 1 + this.maxEnvID) % this.maxEnvID;
+    // }
+    //
+
+    // clamp the envID between 0 and maxEnvID - 1
     if (isNext) {
-      this.envID = (this.envID + 1) % this.maxEnvID;
+        // if at max, go to 0
+        if (this.envID === this.maxEnvID - 1) {
+            this.envID = 0;
+        } else {
+            this.envID += 1;
+        }
     } else {
-      this.envID = (this.envID - 1 + this.maxEnvID) % this.maxEnvID;
+        // if at 0, go to max - 1
+        if (this.envID === 0) {
+            this.envID = this.maxEnvID - 1;
+        } else {
+            this.envID -= 1;
+        }
     }
+
+
     this.loadEnvironment(this.envID, scene);
   }
 
