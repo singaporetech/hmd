@@ -1,6 +1,7 @@
 # macOS
 .DS_Store
 *.zip
+.*/
 
 # pnpm
 pnpm-lock.yaml

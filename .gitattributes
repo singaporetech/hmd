@@ -1,0 +1,2 @@
+assets/5playroom.ply filter=lfs diff=lfs merge=lfs -text
+docs/assets/5playroom.ply filter=lfs diff=lfs merge=lfs -text
