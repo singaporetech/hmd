@@ -8,6 +8,7 @@
         "dev": "./generate-asset-filenames.sh && vite",
         "dev:host": "./generate-asset-filenames.sh && vite --host",
         "build": "tsc && ./generate-asset-filenames.sh && vite build && ./decorate-html.sh && ./copy-assets.sh",
+        "build-clean": "tsc && ./generate-asset-filenames.sh && vite build && ./copy-assets.sh",
         "postbuild": "echo hmd.diaversity.org > docs/CNAME",
         "copy-assets": "./copy-assets.sh",
         "decorate": "./decorate-html.sh",
