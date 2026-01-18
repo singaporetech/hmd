@@ -58,26 +58,24 @@ Do note that this is a project meant for learning and experimentation. There are
 - The lens is a simple uniform shape on both sides (for a more realistic lens, refer to Meta's ancient [DK2 specification](https://github.com/facebookarchive/RiftDK2/blob/master/Headset/Optical/DK2_Optical_Design.pdf))
 - The lens distortion is a fixed shader that does not take into account the actual lens parameters (this is on the roadmap)
 
-### Known Issues
-
-- Large gaussian splats may not get cleared properly when rapidly switching scenes
-
 ## Roadmap
 
 ### Short-term
-- Fix critical bugs
 - Add rendering of the virtual image planes
-- Update lens distortion shader to counteract the real lens's barrel distortion (using lens params from Cardboard spec)
-
-### Mid-term
-- Create a VR mode that renders the HMD View prior to applying real lens optics. This will allow user to see the actual outputs in a Google Cardboard or similar HMD.
+- Expose lens distortion parameters (k1, k2 coefficients) in UI
+- Add visual overlays that update live on HMD model when adjusting parameters (e.g., IPD, FOV)
+- Enhance scene interactivity with manipulable or animated objects
+- Add head/gesture tracking for improved VR mode stereo experience
+- Show inversion notice when virtual image flips
 
 ### Long-term
-- Transition into a platform of multiple implementation-focused learning resources for developing immersive applications
 - **Gaussian Splat Rendering Optimization** - Current implementation uses 3x memory to avoid multi-camera flickering. Future improvements could include:
   - Implement O(n) bucket sort (vs current O(n log n) Timsort) - requires Babylon.js contribution
   - Add worker pool for parallel camera sorting - requires Babylon.js refactor
   - Evaluate Three.js/Spark migration for better multi-camera support via SparkViewpoint API
+
+### Known Bugs to Fix
+- Large gaussian splats may not get cleared properly when rapidly switching scenes
 
 ## Architecture
 
@@ -94,9 +92,9 @@ The application simply uses a 2-layer architecture: App and UI:
    -----|  HMD (src/hmd.ts)   |
    |    +---------------------+
    |
-   |    +------------------------------------------+
-   -----| FrustumVisualizer (src/frustumVisualizer.ts) |
-        +------------------------------------------+
+   |    +------------------------------------------------+
+   -----| FrustumVisualizer (src/frustumVisualizer.ts)   |
+        +------------------------------------------------+
 ```
 
 The HMD class represents a VR headset's parameters and functionalities, including setup for simulated eye cameras and their projections.
@@ -122,7 +120,7 @@ Join us in our mission to democratize immersive education! 🚀
 
 ### Naming Conventions
 
-Files are named using camelCase. For example, `myModule.ts`, to follow Babylon.js naming conventions.
+Files are named using camelCase (e.g., `myModule.ts`).
 
 ## References
 
