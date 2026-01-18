@@ -9,20 +9,21 @@ import {Vector3} from "@babylonjs/core";
 // - this is a bit mask, so we can combine the layers with bitwise OR
 //   e.g., to render the Scene and UI, we set the layerMask to 0x1 | 0x2 = 0x3
 //   - in case you forgot the bitwise OR: 0001 | 0010 = 0011
-// - 0x1: render the Scene
-// - 0x2: render the UI
-// - 0x3: render both the Scene and UI
-// - 0x4: render the HMD
-// - 0x5: render the Scene and HMD
-// - 0x6: render the UI and HMD
-// - 0x7: render the Scene, UI, and HMD
-// - 0x8: render the Frustum
-// - 0xf: render everything
+// - 0x1: render the Scene (primitives only)
+// - 0x2: render the HMD
+// - 0x4: render the Frustum
+// - 0x8: render the UI
+// - 0x10: render Gaussian Splat for main camera
+// - 0x20: render Gaussian Splat for left eye camera
+// - 0x40: render Gaussian Splat for right eye camera
 export const LAYER_NONE = 0x0;
 export const LAYER_SCENE = 0x1;
 export const LAYER_HMD = 0x2;
 export const LAYER_FRUSTUM = 0x4;
 export const LAYER_UI = 0x8;
+export const LAYER_SPLAT_MAIN = 0x10;
+export const LAYER_SPLAT_LEFT = 0x20;
+export const LAYER_SPLAT_RIGHT = 0x40;
 export const LAYER_SCENE_HMD_FRUSTUM = LAYER_SCENE | LAYER_HMD | LAYER_FRUSTUM;
 export const LAYER_SCENE_FRUSTUM = LAYER_SCENE | LAYER_FRUSTUM;
 
