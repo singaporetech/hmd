@@ -4,7 +4,7 @@ This is a web-based VR head-mounted display (HMD) simulator that helps to intera
 
 [![Live Demo](https://img.shields.io/badge/demo-live-green)](https://hmd.diaversity.org)
 
-https://github.com/user-attachments/assets/dcddccde-f353-4098-9406-416448b85bfd
+https://github.com/user-attachments/assets/5743b082-1396-4f69-91ba-68134cd0c647
 
 ## Features
 
