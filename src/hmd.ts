@@ -420,7 +420,6 @@ export class HMD {
     // - this is GLSL code for the distortion shader
     // TODO expose the distortion parameters in the UI
     Effect.ShadersStore["distortionFragmentShader"] = `
-
           // Use high precision for float calculations (important for distortion)
           precision highp float;
 
@@ -457,15 +456,22 @@ export class HMD {
               // Shift distorted delta back to UV space
               vec2 corrected = center + distorted;
 
-              // If corrected coordinate is out of bounds, draw a fallback color
-              if (corrected.x < 0.0 || corrected.x > 1.0 || 
-                  corrected.y < 0.0 || corrected.y > 1.0) {
-                  // Fallback color (greyish pink), used beyond the warped area
-                  gl_FragColor = vec4(0.55, 0.38, 0.4, 1.0);
-              } else {
-                  // Sample the distorted texture normally
-                  gl_FragColor = texture2D(textureSampler, corrected);
-              }
+              // Sample texture FIRST (uniform control flow - required for WebGPU)
+              // This ensures textureSample is called unconditionally
+              vec4 texColor = texture2D(textureSampler, corrected);
+              
+              // Check bounds using step() instead of if/else
+              // step(edge, x) returns 0 if x < edge, 1 if x >= edge
+              // Multiply all bounds checks to get 1.0 only if ALL are satisfied
+              float inBounds = step(0.0, corrected.x) * step(corrected.x, 1.0) 
+                             * step(0.0, corrected.y) * step(corrected.y, 1.0);
+              
+              // Fallback color (greyish pink), used beyond the warped area
+              vec4 fallback = vec4(0.55, 0.38, 0.4, 1.0);
+              
+              // Mix based on bounds check: inBounds=0 → fallback, inBounds=1 → texColor
+              // Using mix() instead of if/else ensures uniform control flow for WebGPU
+              gl_FragColor = mix(fallback, texColor, inBounds);
           }
         `;
 
