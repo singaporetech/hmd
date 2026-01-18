@@ -20,6 +20,8 @@ https://github.com/user-attachments/assets/5743b082-1396-4f69-91ba-68134cd0c647
 
 Visit the live demo: **https://hmd.diaversity.org**
 
+> **Note**: The name "Diaversity" represents our goal to create a diverse platform of learning resources for immersive development education.
+
 <details>
 <summary>Interesting things to try</summary>
 
