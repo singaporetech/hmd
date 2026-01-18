@@ -1,19 +1,13 @@
 # HMD Simulator
 
-This a web-based VR head-mounted display (HMD) simulator that helps to interactively understand the optical and graphical concepts behind VR HMDs.
+This is a web-based VR head-mounted display (HMD) simulator that helps to interactively understand the optical and graphical concepts behind VR HMDs.
 
-![demo](https://github.com/user-attachments/assets/dcddccde-f353-4098-9406-416448b85bfd)
+[![Live Demo](https://img.shields.io/badge/demo-live-green)](https://hmd.diaversity.org)
 
-One of the current motivation is to support the YouTube tutorial: https://youtu.be/OKD4jrnn4WE , but you can play with it regardless of the tutorial.
+https://github.com/user-attachments/assets/5743b082-1396-4f69-91ba-68134cd0c647
 
-# Project Status
+## Features
 
-Do note that this is a project meant for learning and experimentation. There many assumptions and simplifications made in the implementation.
-- The lens is a simple uniform shape on both sides (for a more realistic lens, refer to Meta's ancient [DK2 specification](https://github.com/facebookarchive/RiftDK2/blob/master/Headset/Optical/DK2_Optical_Design.pdf))
-- The lens distortion is a fixed shader that does not take into account the actual lens parameters (this is on the roadmap)
-
-
-## Current Features
 - Simulate a VR HMD's rendering of a scene in the two eye cameras
 - Visualize the frustum of the eye cameras
 - Adjust the HMD parameters (IPD, eye relief, lens-to-display distance, etc.)
@@ -22,40 +16,28 @@ Do note that this is a project meant for learning and experimentation. There man
 - Enter into a "VR" mode that simulates the actual HMD view, allowing the user, when using a mobile device, to see the actual outputs in a Google Cardboard or similar HMD enclosure
 - Basic WASD + mouse camera movement
 
-## Known Issues
-- Large gaussian splats may not get cleared properly when rapidly switching scenes
-- etc.
+## Quick Start
 
-## Roadmap
+Visit the live demo: **https://hmd.diaversity.org**
 
-### Short-term
-- Fix critical bugs
-- Add rendering of the virtual image planes
-- Update lens distortion shader to counteract the real lens's barrel distortion (using lens params from Cardboard spec)
+> **Note**: The name "Diaversity" represents our goal to create a diverse platform of learning resources for immersive development education.
 
-### Mid-term
-- Create a VR mode that renders the HMD View prior to applying real lens optics. This will allow user to see the actual outputs in a Google Cardboard or similar HMD.
+<details>
+<summary>Interesting things to try</summary>
 
-### Long-term
-- Transition into a platform of multiple implementation-focused learning resources for developing immersive applications
-
-# How to run
-
-Just go to the live page built from the latest version that is served via GitHub pages: https://hmd.diaversity.org
-
-### Some interesting things to try
 - Increase the distLens2Display until it is greater than the focal length, f, of the lens. Something will flip...
 - Increase the IPD until the frustum do not overlap anymore.
 - Reduce the eyeRelief to see how the frustum changes.
-- etc...
 
-# How to build and run locally
+</details>
 
-## Prerequisites
+## Local Development
+
+### Prerequisites
 
 This is a TypeScript project that uses npm for package management. You need to have Node.js installed to run npm. You can install Node.js from https://nodejs.org/en/download/
 
-## Steps
+### Steps
 
 1. Clone the repository and `cd` into the cloned directory
 2. Run `npm i` to install the dependencies as specified in `package.json`
@@ -65,24 +47,56 @@ This is a TypeScript project that uses npm for package management. You need to h
 You can inspect the `package.json` file to see other available scripts.
 - note that the `npm run build` script prepares the project for deployment on github pages
 
-# Architecture
+## Tech Stack
+
+- [Babylon.js](https://www.babylonjs.com/) 8.x - 3D rendering engine
+- TypeScript - Type-safe JavaScript
+- [Vite](https://vitejs.dev/) - Build tool and dev server
+- GitHub Pages - Hosting
+
+## Project Status
+
+Do note that this is a project meant for learning and experimentation. There are many assumptions and simplifications made in the implementation.
+- The lens is a simple uniform shape on both sides (for a more realistic lens, refer to Meta's ancient [DK2 specification](https://github.com/facebookarchive/RiftDK2/blob/master/Headset/Optical/DK2_Optical_Design.pdf))
+- The lens distortion is a fixed shader that does not take into account the actual lens parameters (this is on the roadmap)
+
+## Roadmap
+
+### Short-term
+- Add rendering of the virtual image planes
+- Expose lens distortion parameters (k1, k2 coefficients) in UI
+- Add visual overlays that update live on HMD model when adjusting parameters (e.g., IPD, FOV)
+- Enhance scene interactivity with manipulable or animated objects
+- Add head/gesture tracking for improved VR mode stereo experience
+- Show inversion notice when virtual image flips
+
+### Long-term
+- **Gaussian Splat Rendering Optimization** - Current implementation uses 3x memory to avoid multi-camera flickering. Future improvements could include:
+  - Implement O(n) bucket sort (vs current O(n log n) Timsort) - requires Babylon.js contribution
+  - Add worker pool for parallel camera sorting - requires Babylon.js refactor
+  - Evaluate Three.js/Spark migration for better multi-camera support via SparkViewpoint API
+
+### Known Bugs to Fix
+- Large gaussian splats may not get cleared properly when rapidly switching scenes
+
+## Architecture
 
 The application simply uses a 2-layer architecture: App and UI:
 
 ```
- +-----------------+         +-----------------+
- |       App       | ---o)---|        UI       |
- +-----------------+         +-----------------+
+ +---------------------+         +------------------+
+ |   App (src/app.ts)  | ---o)---|  UI (src/ui.ts)  |
+ +---------------------+         +------------------+
    o
    |
    |
-   |    +-----------------+
-   -----|       HMD       |
-   |    +-----------------+
+   |    +---------------------+
+   -----|  HMD (src/hmd.ts)   |
+   |    +---------------------+
    |
-   |    +------------------+
-   -----| FrustumVisualizer|
-        +------------------+
+   |    +------------------------------------------------+
+   -----| FrustumVisualizer (src/frustumVisualizer.ts)   |
+        +------------------------------------------------+
 ```
 
 The HMD class represents a VR headset's parameters and functionalities, including setup for simulated eye cameras and their projections.
@@ -96,10 +110,26 @@ The App class is responsible for creating the scene and updating the scene based
 The UI class is responsible for handling user interactions and use the App to update the scene.
 - UI knows about the App but App does not know about the UI.
 
-# References
+## Contributing
+
+We welcome contributions from the community! Whether it's improving documentation, enhancing features, or fixing bugs, your input is valuable. To get started:
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/your-feature`).
+3. Commit changes with clear messages (`git commit -m "Your message"`).
+4. Push to the branch and open a Pull Request.
+
+Join us in our mission to democratize immersive education! 🚀
+
+### Naming Conventions
+
+Files are named using camelCase (e.g., `myModule.ts`).
+
+## References
+
+### Learning Resources
 
 The rendering framework is primarily based on Babylon.js:
-https://doc.babylonjs.com/
+- [Babylon.js Documentation](https://doc.babylonjs.com/)
 
 The math and implementation were studied from the following sources:
 - HMD concepts: https://youtu.be/OKD4jrnn4WE
@@ -109,25 +139,14 @@ The math and implementation were studied from the following sources:
 - perspective projection implementation: https://www.songho.ca/opengl/gl_transform.html
 - perspective projection code: https://threejs.org/docs/#api/en/math/Matrix4.makePerspective
 
-Gaussian splats were kindly provided at 
-- https://github.com/BabylonJS/Assets/tree/master/splats
-- https://huggingface.co/VladKobranov/splats
+### Assets
+
+Gaussian splats were kindly provided by:
+- [BabylonJS Assets](https://github.com/BabylonJS/Assets/tree/master/splats)
+- [VladKobranov on HuggingFace](https://huggingface.co/VladKobranov/splats)
 
 All rights to the gaussian splats are reserved to their respective owners/authors.
 
-# Contributions
-We welcome contributions from the community! Whether it's improving documentation, enhancing features, or fixing bugs, your input is valuable. To get started:
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/your-feature`).
-3. Commit changes with clear messages (`git commit -m "Your message"`).
-4. Push to the branch and open a Pull Request.
-
-Join us in our mission to democratize immersive education! 🚀
-
-## Naming Conventions
-
-Files are named using camelCase. For example, `myModule.ts`, to follow Babylon.js naming conventions.
-
-# License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

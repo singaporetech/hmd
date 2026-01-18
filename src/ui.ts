@@ -26,6 +26,11 @@ export class UI {
     // VR centre line
     private vrCenterMarker!: GUI.Rectangle;
 
+    // Loading indicator
+    private loadingContainer!: GUI.Container;
+    private loadingText!: GUI.TextBlock;
+    private advancedTexture!: GUI.AdvancedDynamicTexture;
+
     /**
      * Create a new UI object.
      * @param hmd The HMD object to control.
@@ -33,12 +38,15 @@ export class UI {
      */
     constructor(hmd: HMD, scene: Scene, app: App) {
         // create a GUI
-        const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
+        this.advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
 
         // set layerMask so that we prevent it from being rendered by the HMD cameras
-        if (advancedTexture.layer) {
-            advancedTexture.layer.layerMask = LAYER_UI;
+        if (this.advancedTexture.layer) {
+            this.advancedTexture.layer.layerMask = LAYER_UI;
         }
+
+        // Create loading indicator (hidden by default)
+        this.createLoadingIndicator();
 
         // create a stack panel to hold the controls
         const userPanel = new GUI.StackPanel();
@@ -46,7 +54,7 @@ export class UI {
         userPanel.fontSize = '14px';
         userPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
         userPanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-        advancedTexture.addControl(userPanel);
+        this.advancedTexture.addControl(userPanel);
 
         // padding
         userPanel.paddingRight = '20px';
@@ -96,7 +104,7 @@ export class UI {
         statsPanel.fontSize = '12px';
         statsPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
         statsPanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-        advancedTexture.addControl(statsPanel);
+        this.advancedTexture.addControl(statsPanel);
 
         // reduce the line space between the text blocks
         statsPanel.paddingBottom = '20px';
@@ -147,7 +155,7 @@ export class UI {
         this.vrCenterMarker.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
         this.vrCenterMarker.top = "-98px"; // adjust if needed
         this.vrCenterMarker.isVisible = false; // hidden by default
-        advancedTexture.addControl(this.vrCenterMarker);
+        this.advancedTexture.addControl(this.vrCenterMarker);
 
         // Create a horizontal StackPanel to hold both buttons side by side
         const buttonPanel = new GUI.StackPanel();
@@ -185,7 +193,7 @@ export class UI {
         buttonPanel.addControl(toggleFrustumR);
 
         // Add the buttonPanel to the userPanel
-        advancedTexture.addControl(buttonPanel)
+        this.advancedTexture.addControl(buttonPanel)
 
         // add some textual instructions at bottom  to use WASD and 
         // mouse to move the camera
@@ -211,8 +219,8 @@ export class UI {
         instructionsBackground.horizontalAlignment = instructions.horizontalAlignment;
         instructionsBackground.verticalAlignment = instructions.verticalAlignment;
         instructionsBackground.cornerRadius = 3;
-        advancedTexture.addControl(instructionsBackground);
-        advancedTexture.addControl(instructions);
+        this.advancedTexture.addControl(instructionsBackground);
+        this.advancedTexture.addControl(instructions);
 
         // add leftbutton and rightbutton to a panel 20px from the previous buttonPanel
         const envButtonPanel = new GUI.StackPanel();
@@ -222,7 +230,7 @@ export class UI {
         envButtonPanel.width = '100px';
         envButtonPanel.height = '100px';
         envButtonPanel.paddingBottom = '40px';
-        advancedTexture.addControl(envButtonPanel);
+        this.advancedTexture.addControl(envButtonPanel);
 
         // create a left and right button to change the loaded environment
         const leftButton = this.createToggleButton('<', '#800080', () => {
@@ -284,6 +292,92 @@ export class UI {
         joystick.setJoystickSensibility(0.5);
         joystick.setJoystickColor('red');
         return joystick;
+    }
+
+    /**
+     * Create a loading indicator with animated spinner.
+     */
+    private createLoadingIndicator() {
+        // Create container for loading UI
+        this.loadingContainer = new GUI.Container();
+        this.loadingContainer.width = "100%";
+        this.loadingContainer.height = "100%";
+        this.loadingContainer.isVisible = false; // Hidden by default
+        this.advancedTexture.addControl(this.loadingContainer);
+
+        // Semi-transparent background
+        const background = new GUI.Rectangle();
+        background.width = "100%";
+        background.height = "100%";
+        background.background = "rgba(0, 0, 0, 0.7)";
+        background.thickness = 0;
+        this.loadingContainer.addControl(background);
+
+        // Create circular progress spinner
+        const spinnerContainer = new GUI.Container();
+        spinnerContainer.width = "120px";
+        spinnerContainer.height = "120px";
+        this.loadingContainer.addControl(spinnerContainer);
+
+        // Outer circle (track)
+        const outerCircle = new GUI.Ellipse();
+        outerCircle.width = "100px";
+        outerCircle.height = "100px";
+        outerCircle.color = "rgba(255, 255, 255, 0.3)";
+        outerCircle.thickness = 8;
+        outerCircle.background = "transparent";
+        spinnerContainer.addControl(outerCircle);
+
+        // Inner rotating circle (progress indicator)
+        const innerCircle = new GUI.Ellipse();
+        innerCircle.width = "100px";
+        innerCircle.height = "100px";
+        innerCircle.color = "#9b59b6"; // Purple color matching theme
+        innerCircle.thickness = 8;
+        innerCircle.background = "transparent";
+        innerCircle.arc = 0.75; // Show 3/4 of the circle
+        spinnerContainer.addControl(innerCircle);
+
+        // Animate the spinner rotation
+        let angle = 0;
+        const animate = () => {
+            if (this.loadingContainer.isVisible) {
+                angle += 0.05;
+                innerCircle.rotation = angle;
+                requestAnimationFrame(animate);
+            }
+        };
+
+        // Start animation when visible
+        this.loadingContainer.onIsVisibleChangedObservable.add((isVisible) => {
+            if (isVisible) {
+                angle = 0;
+                animate();
+            }
+        });
+
+        // Loading text below spinner
+        this.loadingText = new GUI.TextBlock();
+        this.loadingText.text = "Loading...";
+        this.loadingText.color = "white";
+        this.loadingText.fontSize = 24;
+        this.loadingText.top = "80px";
+        spinnerContainer.addControl(this.loadingText);
+    }
+
+    /**
+     * Show the loading indicator.
+     */
+    showLoading(message: string = "Loading...") {
+        this.loadingText.text = message;
+        this.loadingContainer.isVisible = true;
+    }
+
+    /**
+     * Hide the loading indicator.
+     */
+    hideLoading() {
+        this.loadingContainer.isVisible = false;
     }
 
 }

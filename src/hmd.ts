@@ -29,6 +29,8 @@ import {
   LAYER_NONE,
   LAYER_HMD,
   LAYER_SCENE,
+  LAYER_SPLAT_LEFT,
+  LAYER_SPLAT_RIGHT,
   CAM_SPEED,
   MESH_EDGE_WIDTH,
 } from "./constants";
@@ -380,9 +382,9 @@ export class HMD {
     this.camL = new FreeCamera("camL", this.eyePosL, scene);
     this.camR = new FreeCamera("camR", this.eyePosR, scene);
 
-    // set eye cameras to render only the scene
-    this.camL.layerMask = LAYER_SCENE;
-    this.camR.layerMask = LAYER_SCENE;
+    // set eye cameras to render only the scene + their respective splats
+    this.camL.layerMask = LAYER_SCENE | LAYER_SPLAT_LEFT;
+    this.camR.layerMask = LAYER_SCENE | LAYER_SPLAT_RIGHT;
 
     // set the projection matrix for the cameras
     this.camL.freezeProjectionMatrix(this.projMatL);

@@ -25,6 +25,7 @@ let ui: UI;
 const app = new App(engine);
 app.createScene().then(scene => {
     ui = new UI(app.hmd, scene, app);
+    app.setUI(ui); // Pass UI reference to App for loading indicator
     engine.runRenderLoop(() => {
         scene.render();
     })

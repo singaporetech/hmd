@@ -39,6 +39,9 @@ import {
   LAYER_UI,
   LAYER_HMD,
   LAYER_FRUSTUM,
+  LAYER_SPLAT_MAIN,
+  LAYER_SPLAT_LEFT,
+  LAYER_SPLAT_RIGHT,
   MAIN_CAM_POS,
   CAM_SPEED,
   PIP_VIEWPORT_WIDTH,
@@ -56,8 +59,8 @@ export class App {
   private envID = 0;
   private maxEnvID = 5;
 
-  // keep a reference to the splat mesh to dispose later
-  private splatMesh!: Mesh;
+  // keep a reference to the splat meshes to dispose later
+  private splatMeshes: Mesh[] = [];
 
   // shadow generator for the scene
   private shadowGenerator!: ShadowGenerator;
@@ -75,6 +78,9 @@ export class App {
   pipViewPortHeight!: number;
   pipViewPortX!: number;
   pipViewPortY!: number;
+
+  // UI reference for loading indicator
+  private ui?: any; // Will be set after UI is created
 
   // display mode
   currDisplayMode: DisplayMode = DisplayMode.Simulation;
@@ -105,6 +111,14 @@ export class App {
 
     // register the SPLATFileLoader plugin
     SceneLoader.RegisterPlugin(new SPLATFileLoader());
+  }
+
+  /**
+   * Set the UI reference so we can call showLoading/hideLoading.
+   * @param ui The UI instance.
+   */
+  setUI(ui: any) {
+    this.ui = ui;
   }
 
   /**
@@ -266,10 +280,15 @@ export class App {
         disposedAll = false;
       });
 
-      // Dispose of splat mesh if it exists
-      if (this.splatMesh && !this.splatMesh.isDisposed()) {
-        console.log(`Disposing of mesh: ${this.splatMesh.name}`);
-        this.splatMesh.dispose();
+      // Dispose of splat meshes if they exist
+      if (this.splatMeshes.length > 0) {
+        this.splatMeshes.forEach((mesh) => {
+          if (mesh && !mesh.isDisposed()) {
+            console.log(`Disposing of mesh: ${mesh.name}`);
+            mesh.dispose();
+          }
+        });
+        this.splatMeshes = [];
         disposedAll = false;
       }
     }
@@ -331,7 +350,7 @@ export class App {
     this.camera.maxZ = 100;
 
     // set camera layerMask to be able to render all
-    this.camera.layerMask = LAYER_SCENE | LAYER_HMD | LAYER_FRUSTUM;
+    this.camera.layerMask = LAYER_SCENE | LAYER_HMD | LAYER_FRUSTUM | LAYER_SPLAT_MAIN;
 
     // set a new camera to only render the GUI so that we can set it as the top layer to be interactible
     const guiCamera = new FreeCamera("guiCamera", Vector3.Zero(), scene);
@@ -402,6 +421,7 @@ export class App {
    * Add a gaussian splat to the scene.
    * - the splat filenames are generated with generate-asset-filenames.sh
    * - fetch the splat filenames from assets/assets.json
+   * - loads 3 separate meshes (one for each camera) to avoid flickering
    *
    * @param envID The environment ID to determine which splat to load.
    * @param scene The scene to add the Gaussian Splat to.
@@ -423,45 +443,88 @@ export class App {
     );
     hemiLight.intensity = 0.6;
 
-    // Load the Gaussian Splat mesh locally
-    SceneLoader.ImportMeshAsync(
-      "splat",
-      "assets/",
-      splatFilenames[splatID],
-      scene,
-    ).then((result) => {
-      // save the mesh to be able to dispose later
-      this.splatMesh = result.meshes[0] as Mesh;
-      this.splatMesh.scaling.setAll(0.3);
+    const filename = splatFilenames[splatID];
 
-      // for filename containing "splatfacto", rotate the mesh
-      if (splatFilenames[splatID].includes("splatfacto")) {
-        // Apply -90 degrees rotation around the X-axis
-        this.splatMesh.rotation = new Vector3(-Math.PI / 2, 0, 0);
-      }
+    // Show loading indicator
+    this.ui?.showLoading("Loading Gaussian Splat...");
 
-      // if filename contains skull
-      if (splatFilenames[splatID].includes("skull")) {
-        this.splatMesh.rotation = new Vector3(0, 3.3 * Math.PI, 0);
-      }
+    try {
+      // Load the Gaussian Splat mesh 3 times in parallel (one for each camera)
+      // SOLUTION TO FLICKERING ISSUE (Jan 18, 2026):
+      // Gaussian splats require back-to-front depth sorting for alpha blending.
+      // With multiple cameras viewing from different angles, only one sort order can exist.
+      // Solution: Create 3 separate splat meshes with independent layer masks so each
+      // camera (mainCam, camL, camR) has its own mesh with its own depth sorting.
+      // Trade-off: 3x memory usage, but eliminates all flickering artifacts.
+      const [resultMain, resultLeft, resultRight] = await Promise.all([
+        SceneLoader.ImportMeshAsync("splatMain", "assets/", filename, scene),
+        SceneLoader.ImportMeshAsync("splatLeft", "assets/", filename, scene),
+        SceneLoader.ImportMeshAsync("splatRight", "assets/", filename, scene),
+      ]);
 
-      // if filename contains "firePit"
-      if (splatFilenames[splatID].includes("firePit")) {
-        this.splatMesh.position = new Vector3(0, 0.3, 0);
-        this.splatMesh.scaling.setAll(0.2);
-      }
+      // Extract meshes and store them
+      const meshMain = resultMain.meshes[0] as Mesh;
+      const meshLeft = resultLeft.meshes[0] as Mesh;
+      const meshRight = resultRight.meshes[0] as Mesh;
+      this.splatMeshes = [meshMain, meshLeft, meshRight];
 
-      // if filename contains "kotofuri"
-      if (splatFilenames[splatID].includes("kotofuri")) {
-        this.splatMesh.position = new Vector3(1.3, -1.5, -1.7);
-        // rotate around y by 70 degrees
-        this.splatMesh.rotation = new Vector3(0, Math.PI * 0.5, 0);
-        this.splatMesh.scaling.setAll(0.2);
-      }
+      // Apply transformations to all meshes
+      this.splatMeshes.forEach((mesh) => {
+        mesh.scaling.setAll(0.3);
 
-      // Set the layer mask for the Gaussian Splat
-      this.splatMesh.layerMask = LAYER_SCENE;
-    });
+        // for filename containing "splatfacto", rotate the mesh
+        if (filename.includes("splatfacto")) {
+          // Apply -90 degrees rotation around the X-axis
+          mesh.rotation = new Vector3(-Math.PI / 2, 0, 0);
+        }
+
+        // if filename contains skull
+        if (filename.includes("skull")) {
+          mesh.rotation = new Vector3(0, 3.3 * Math.PI, 0);
+        }
+
+        // if filename contains "firePit"
+        if (filename.includes("firePit")) {
+          mesh.position = new Vector3(0, 0.3, 0);
+          mesh.scaling.setAll(0.2);
+        }
+
+        // if filename contains "kotofuri"
+        if (filename.includes("kotofuri")) {
+          mesh.position = new Vector3(1.3, -1.5, -1.7);
+          // rotate around y by 70 degrees
+          mesh.rotation = new Vector3(0, Math.PI * 0.5, 0);
+          mesh.scaling.setAll(0.2);
+        }
+      });
+
+      // Set layer masks so each camera renders its own mesh
+      meshMain.layerMask = LAYER_SPLAT_MAIN;
+      meshLeft.layerMask = LAYER_SPLAT_LEFT;
+      meshRight.layerMask = LAYER_SPLAT_RIGHT;
+
+      // Hide loading indicator on success
+      this.ui?.hideLoading();
+
+    } catch (error) {
+      console.error("Error loading gaussian splat:", error);
+      
+      // Hide loading indicator
+      this.ui?.hideLoading();
+      
+      // On error, clear any partially loaded meshes and reload primitives
+      this.splatMeshes.forEach((mesh) => {
+        if (mesh && !mesh.isDisposed()) {
+          mesh.dispose();
+        }
+      });
+      this.splatMeshes = [];
+      
+      // Reload the primitives scene as fallback
+      this.envID = 0;
+      this.loadEnvironment(0, scene);
+      throw error; // Re-throw so caller can handle
+    }
   }
 
   /**
@@ -550,9 +613,9 @@ export class App {
   togglePIPViewports() {
     // toggle the layer masks for the HMD eye cameras
     this.hmd.camL.layerMask =
-      this.hmd.camL.layerMask === LAYER_NONE ? LAYER_SCENE : LAYER_NONE;
+      this.hmd.camL.layerMask === LAYER_NONE ? (LAYER_SCENE | LAYER_SPLAT_LEFT) : LAYER_NONE;
     this.hmd.camR.layerMask =
-      this.hmd.camR.layerMask === LAYER_NONE ? LAYER_SCENE : LAYER_NONE;
+      this.hmd.camR.layerMask === LAYER_NONE ? (LAYER_SCENE | LAYER_SPLAT_RIGHT) : LAYER_NONE;
 
     // toggle the layer mask for the main camera
     // - when the PIP viewports are toggled off, the main camera should not render the HMD
@@ -576,7 +639,7 @@ export class App {
     if (mode === DisplayMode.VR) {
       this.camera.layerMask = LAYER_NONE;
     } else {
-      this.camera.layerMask = LAYER_SCENE | LAYER_HMD | LAYER_FRUSTUM;
+      this.camera.layerMask = LAYER_SCENE | LAYER_HMD | LAYER_FRUSTUM | LAYER_SPLAT_MAIN;
     }
   }
 
