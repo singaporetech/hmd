@@ -38,6 +38,10 @@ Do note that this is a project meant for learning and experimentation. There man
 
 ### Long-term
 - Transition into a platform of multiple implementation-focused learning resources for developing immersive applications
+- **Gaussian Splat Rendering Optimization** - Current implementation uses 3x memory to avoid multi-camera flickering. Future improvements could include:
+  - Implement O(n) bucket sort (vs current O(n log n) Timsort) - requires Babylon.js contribution
+  - Add worker pool for parallel camera sorting - requires Babylon.js refactor
+  - Evaluate Three.js/Spark migration for better multi-camera support via SparkViewpoint API
 
 # How to run
 
