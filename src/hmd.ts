@@ -77,6 +77,13 @@ export class HMD {
   f = 0.043;
   distLens2Display = 0.042;
 
+  /**
+   * Display PPI (Pixels Per Inch) - fixed hardware parameter
+   * Typical values: 350-500 for phone VR, 400-600 for dedicated HMDs
+   * Used to calculate render target resolution from physical display size
+   */
+  displayPPI = 400;
+
   // Calculated values
   distEye2Display!: number;
   magnification!: number;
@@ -128,7 +135,13 @@ export class HMD {
   // TODO: think about how to show the virtual image
   private virtualImg!: Mesh;
 
-  // render targets for the left and right eyes
+  // Render targets for the left and right eyes
+  // NOTE: Currently created but not actively used for PIP display.
+  // The PIP viewports render directly to canvas via camera viewports.
+  // These are preserved for potential future use:
+  // - Virtual image rendering simulation
+  // - Post-processing effects per eye
+  // - Render-to-texture for HMD display material
   renderTargetL!: RenderTargetTexture;
   renderTargetR!: RenderTargetTexture;
 
@@ -137,9 +150,25 @@ export class HMD {
    * @returns The aspect ratio of an eye's view.
    */
   get aspectRatioEye() {
-    return (
-      (this.rightForLeftEye - this.leftForLeftEye) / (this.top - this.bottom)
-    );
+    // Return aspect ratio as width/height (should be > 1 for typical viewports)
+    // Note: The frustum bounds have vertical > horizontal, so we invert the ratio
+    return (this.top - this.bottom) / (this.rightForLeftEye - this.leftForLeftEye);
+  }
+
+  /**
+   * Get the render target width in pixels based on display physical size and PPI.
+   * @returns The render target width in pixels.
+   */
+  get renderTargetWidth(): number {
+    return Math.round(this.displayWidth * 39.3701 * this.displayPPI);
+  }
+
+  /**
+   * Get the render target height in pixels based on display physical size and PPI.
+   * @returns The render target height in pixels.
+   */
+  get renderTargetHeight(): number {
+    return Math.round(this.displayHeight * 39.3701 * this.displayPPI);
   }
 
   /**
@@ -256,6 +285,16 @@ export class HMD {
   }
 
   /**
+   * Get fixed hardware parameters for display in UI.
+   * @returns The list of fixed hardware parameters.
+   */
+  get displayFixedParams() {
+    return {
+      displayPPI: this.displayPPI,
+    };
+  }
+
+  /**
    * Set a particular param value from the UI sliders.
    * - update the projection matrix and other values
    * - update the visual representation of the HMD
@@ -291,8 +330,24 @@ export class HMD {
     // update the display size with affecting the children
     this.updateDisplaySize();
 
+    // resize render targets if display dimensions changed
+    if (key === 'displayWidth' || key === 'displayHeight') {
+      this.resizeRenderTargets();
+    }
+
     // notify observers that the values have been updated
     this.notifyValuesUpdated();
+  }
+
+  /**
+   * Resize the render targets based on current display dimensions and PPI.
+   * Called when displayWidth or displayHeight parameters change.
+   */
+  public resizeRenderTargets() {
+    const newWidth = this.renderTargetWidth;
+    const newHeight = this.renderTargetHeight;
+    this.renderTargetL.resize({ width: newWidth, height: newHeight });
+    this.renderTargetR.resize({ width: newWidth, height: newHeight });
   }
 
   /**
@@ -400,16 +455,19 @@ export class HMD {
     this.eyeR.layerMask = LAYER_HMD;
     //this.virtualImg.layerMask = LAYER_HMD;
 
-    // create render targets for the left and right eyes
+    // Create render targets for the left and right eyes
+    // NOTE: These render targets are now actively used to fix gaussian splat rendering issues.
+    // They render at the correct resolution based on the HMD's physical display size and PPI.
+    // Future work may add separate render targets for virtual image plane visualization.
     this.renderTargetL = new RenderTargetTexture(
       "renderTargetL",
-      { width: 512, height: 512 },
+      { width: this.renderTargetWidth, height: this.renderTargetHeight },
       scene,
       false,
     );
     this.renderTargetR = new RenderTargetTexture(
       "renderTargetR",
-      { width: 512, height: 512 },
+      { width: this.renderTargetWidth, height: this.renderTargetHeight },
       scene,
       false,
     );

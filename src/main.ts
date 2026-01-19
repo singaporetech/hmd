@@ -43,13 +43,17 @@ async function initializeEngine(canvasElement: HTMLCanvasElement): Promise<Engin
     return webglEngine;
 }
 
+// App instance to be initialized
+let app: App;
+
 // Initialize engine and start the app
 initializeEngine(canvas).then(engine => {
     // create the scene and run the render loop
-    const app = new App(engine as Engine);
+    app = new App(engine as Engine);
     app.createScene().then(scene => {
         ui = new UI(app.hmd, scene, app);
         app.setUI(ui); // Pass UI reference to App for loading indicator
+        
         engine.runRenderLoop(() => {
             scene.render();
         })
@@ -58,6 +62,8 @@ initializeEngine(canvas).then(engine => {
     // resize the canvas when the window is resized
     window.addEventListener('resize', function () {
         engine.resize();
+        // Update PIP viewport dimensions to match new canvas aspect ratio
+        app?.updateHMDEyeCameraViewports();
     });
 }).catch(error => {
     console.error('Failed to initialize engine:', error);

@@ -145,6 +145,21 @@ export class UI {
             }
         }
 
+        // Fixed hardware parameters (greyish-yellow)
+        const fixedParams = hmd.displayFixedParams;
+        for (const key in fixedParams) {
+            if (fixedParams.hasOwnProperty(key)) {
+                const textBlock = new GUI.TextBlock();
+                const typedKey = key as keyof typeof fixedParams;
+                const value = fixedParams[typedKey];
+                textBlock.text = `${key}: ${value}`;
+                textBlock.height = '12px';
+                textBlock.color = '#AAAA66'; // greyish-yellow
+                textBlock.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                statsPanel.addControl(textBlock);
+            }
+        }
+
         // create a rectangle to represent the VR centre lines
         this.vrCenterMarker = new GUI.Rectangle("vrCenterMarker");
         this.vrCenterMarker.width = "2px";
