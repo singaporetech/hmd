@@ -112,11 +112,34 @@ The UI class is responsible for handling user interactions and use the App to up
 
 ## Contributing
 
-We welcome contributions from the community! Whether it's improving documentation, enhancing features, or fixing bugs, your input is valuable. To get started:
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/your-feature`).
-3. Commit changes with clear messages (`git commit -m "Your message"`).
-4. Push to the branch and open a Pull Request.
+We welcome contributions from the community! Whether it's improving documentation, enhancing features, or fixing bugs, your input is valuable.
+
+### Branch Workflow
+
+This project uses a two-tier branch strategy:
+- **`main`** - Production-ready code, protected branch
+- **`dev`** - Integration branch for ongoing development (default branch for PRs)
+
+### Contributing Steps
+
+1. **Fork the repository**
+2. **Create a feature branch from `dev`**:
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b feature/your-feature
+   ```
+3. **Make your changes** with clear, descriptive commits
+4. **Push to your fork** and open a Pull Request **targeting the `dev` branch**
+5. **Request review** - At least 1 reviewer approval is recommended before merging
+6. Once approved, your changes will be merged to `dev`
+7. Periodically, `dev` will be merged to `main` for releases
+
+### PR Guidelines
+- Target the **`dev`** branch (not `main`) for all pull requests
+- Write clear commit messages describing what and why
+- Update documentation if you're changing functionality
+- Test your changes locally before submitting
 
 Join us in our mission to democratize immersive education! 🚀
 
