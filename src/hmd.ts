@@ -33,6 +33,7 @@ import {
   LAYER_SPLAT_RIGHT,
   CAM_SPEED,
   MESH_EDGE_WIDTH,
+  HMD_CARDBOARD_V2,
 } from "./constants";
 
 export class HMD {
@@ -42,47 +43,31 @@ export class HMD {
 
   /**
    * The parameters for the VR HMD.
-   *
-   * Note that Cardboard 2.0's are:
-   *   f: 40mm
-   *   ipd: 64mm
-   *   eyeRelief: 18mm
-   *   distLens2Display: 39mm
-   *   displayWidth: 120.96mm
-   *   displayHeight: 68.03mm
-   *   lensDiameter: 34mm
-   *
+   * Default values loaded from HMD_CARDBOARD_V2 preset in constants.ts
+   * 
    * The f and distLens2Display are usually determined in a manner to
    * create a distEye2Img (focal distance) of around 1-2m for a comfortable
    * viewing experience.
    */
   pos = new Vector3(0, 0.1, -0.5);
-  eyeRelief = 0.018;
-  displayWidth = 0.12096;
-  // displayHeight = 0.06803;
-  displayHeight = 0.068;
-  displayDepth = 0.005;
-  lensDiameter = 0.034;
-  lensDepth = 0.005;
-  eyeDiameter = 0.015;
-  farFromNear = 1.5;
-  //ipd = .06;
-  //f = .04;
-  //distLens2Display = .039;
-
-  /**
-   * The cardboard from shopee:
-   */
-  ipd = 0.065;
-  f = 0.043;
-  distLens2Display = 0.042;
+  eyeRelief = HMD_CARDBOARD_V2.eyeRelief;
+  displayWidth = HMD_CARDBOARD_V2.displayWidth;
+  displayHeight = HMD_CARDBOARD_V2.displayHeight;
+  displayDepth = HMD_CARDBOARD_V2.displayDepth;
+  lensDiameter = HMD_CARDBOARD_V2.lensDiameter;
+  lensDepth = HMD_CARDBOARD_V2.lensDepth;
+  eyeDiameter = HMD_CARDBOARD_V2.eyeDiameter;
+  farFromNear = HMD_CARDBOARD_V2.farFromNear;
+  ipd = HMD_CARDBOARD_V2.ipd;
+  f = HMD_CARDBOARD_V2.f;
+  distLens2Display = HMD_CARDBOARD_V2.distLens2Display;
 
   /**
    * Display PPI (Pixels Per Inch) - fixed hardware parameter
    * Typical values: 350-500 for phone VR, 400-600 for dedicated HMDs
    * Used to calculate render target resolution from physical display size
    */
-  displayPPI = 400;
+  displayPPI = HMD_CARDBOARD_V2.displayPPI;
 
   // Calculated values
   distEye2Display!: number;
