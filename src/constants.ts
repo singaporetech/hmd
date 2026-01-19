@@ -36,7 +36,14 @@ export const MESH_EDGE_WIDTH = 0.1;
 export const VIEWPORT_BORDER_THICKNESS = 3;
 
 // Configuration for the PIP view
-export const PIP_VIEWPORT_WIDTH = 0.25; // 25% of the screen width
+export const PIP_VIEWPORT_WIDTH = 0.25; // 25% of the screen width (deprecated, use BASE_PIP_WIDTH_FRACTION)
+export const BASE_PIP_WIDTH_FRACTION = 0.20; // Base PIP viewport width as fraction of canvas (20%)
+export const MAX_PIP_WIDTH_FRACTION = 0.45; // Maximum PIP viewport width (45% per viewport, 90% total for two)
+export const MAX_PIP_HEIGHT_FRACTION = 0.9; // Maximum PIP viewport height (90% of canvas)
+
+// Base HMD display dimensions for scaling calculations (Cardboard 2.0)
+export const BASE_DISPLAY_WIDTH = 0.121; // meters (120.96mm)
+export const BASE_DISPLAY_HEIGHT = 0.068; // meters (68.03mm)
 
 // Display mode
 export enum DisplayMode {

@@ -45,6 +45,11 @@ import {
   MAIN_CAM_POS,
   CAM_SPEED,
   PIP_VIEWPORT_WIDTH,
+  BASE_PIP_WIDTH_FRACTION,
+  MAX_PIP_WIDTH_FRACTION,
+  MAX_PIP_HEIGHT_FRACTION,
+  BASE_DISPLAY_WIDTH,
+  BASE_DISPLAY_HEIGHT,
   DisplayMode,
 } from "./constants";
 
@@ -326,14 +331,10 @@ export class App {
     
     // Scale based on displayWidth ONLY
     // displayHeight affects viewport indirectly through aspectRatioEye
-    const baseDisplayWidth = 0.121;  // meters
-    const widthScale = this.hmd.displayWidth / baseDisplayWidth;
-    
-    // Base viewport width fraction at base scale
-    const baseWidthFraction = 0.20;
+    const widthScale = this.hmd.displayWidth / BASE_DISPLAY_WIDTH;
     
     // Calculate width scaled by displayWidth
-    this.pipViewPortWidth = baseWidthFraction * widthScale;
+    this.pipViewPortWidth = BASE_PIP_WIDTH_FRACTION * widthScale;
     
     // Calculate height to match projection matrix aspect ratio (prevents distortion)
     // As displayWidth increases: viewport gets wider
@@ -566,14 +567,10 @@ export class App {
       const canvasHeight = this.engine.getRenderHeight();
       
       // Scale width based on displayWidth
-      const baseDisplayWidth = 0.121;
-      const widthScale = this.hmd.displayWidth / baseDisplayWidth;
-      
-      // Base viewport width fraction
-      const baseWidthFraction = 0.20;
+      const widthScale = this.hmd.displayWidth / BASE_DISPLAY_WIDTH;
       
       // Calculate width scaled by displayWidth
-      this.pipViewPortWidth = baseWidthFraction * widthScale;
+      this.pipViewPortWidth = BASE_PIP_WIDTH_FRACTION * widthScale;
       
       // Calculate height to match projection matrix aspect ratio
       const pipWidthPixels = this.pipViewPortWidth * canvasWidth;
@@ -581,19 +578,16 @@ export class App {
       this.pipViewPortHeight = pipHeightPixels / canvasHeight;
       
       // Clamp to ensure viewports fit on screen
-      const maxWidthFraction = 0.45;
-      const maxHeightFraction = 0.9;
-      
-      if (this.pipViewPortWidth > maxWidthFraction) {
-        this.pipViewPortWidth = maxWidthFraction;
+      if (this.pipViewPortWidth > MAX_PIP_WIDTH_FRACTION) {
+        this.pipViewPortWidth = MAX_PIP_WIDTH_FRACTION;
         // Recalculate height to maintain aspect ratio
         const clampedWidthPixels = this.pipViewPortWidth * canvasWidth;
         const clampedHeightPixels = clampedWidthPixels * this.hmd.aspectRatioEye;
         this.pipViewPortHeight = clampedHeightPixels / canvasHeight;
       }
       
-      if (this.pipViewPortHeight > maxHeightFraction) {
-        this.pipViewPortHeight = maxHeightFraction;
+      if (this.pipViewPortHeight > MAX_PIP_HEIGHT_FRACTION) {
+        this.pipViewPortHeight = MAX_PIP_HEIGHT_FRACTION;
         // Recalculate width to maintain aspect ratio
         const clampedHeightPixels = this.pipViewPortHeight * canvasHeight;
         const clampedWidthPixels = clampedHeightPixels / this.hmd.aspectRatioEye;
