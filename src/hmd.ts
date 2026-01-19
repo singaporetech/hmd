@@ -33,6 +33,7 @@ import {
   LAYER_SPLAT_RIGHT,
   CAM_SPEED,
   MESH_EDGE_WIDTH,
+  HMD_CARDBOARD_V2,
 } from "./constants";
 
 export class HMD {
@@ -42,40 +43,31 @@ export class HMD {
 
   /**
    * The parameters for the VR HMD.
-   *
-   * Note that Cardboard 2.0's are:
-   *   f: 40mm
-   *   ipd: 64mm
-   *   eyeRelief: 18mm
-   *   distLens2Display: 39mm
-   *   displayWidth: 120.96mm
-   *   displayHeight: 68.03mm
-   *   lensDiameter: 34mm
-   *
+   * Default values loaded from HMD_CARDBOARD_V2 preset in constants.ts
+   * 
    * The f and distLens2Display are usually determined in a manner to
    * create a distEye2Img (focal distance) of around 1-2m for a comfortable
    * viewing experience.
    */
   pos = new Vector3(0, 0.1, -0.5);
-  eyeRelief = 0.018;
-  displayWidth = 0.12096;
-  // displayHeight = 0.06803;
-  displayHeight = 0.068;
-  displayDepth = 0.005;
-  lensDiameter = 0.034;
-  lensDepth = 0.005;
-  eyeDiameter = 0.015;
-  farFromNear = 1.5;
-  //ipd = .06;
-  //f = .04;
-  //distLens2Display = .039;
+  eyeRelief = HMD_CARDBOARD_V2.eyeRelief;
+  displayWidth = HMD_CARDBOARD_V2.displayWidth;
+  displayHeight = HMD_CARDBOARD_V2.displayHeight;
+  displayDepth = HMD_CARDBOARD_V2.displayDepth;
+  lensDiameter = HMD_CARDBOARD_V2.lensDiameter;
+  lensDepth = HMD_CARDBOARD_V2.lensDepth;
+  eyeDiameter = HMD_CARDBOARD_V2.eyeDiameter;
+  farFromNear = HMD_CARDBOARD_V2.farFromNear;
+  ipd = HMD_CARDBOARD_V2.ipd;
+  f = HMD_CARDBOARD_V2.f;
+  distLens2Display = HMD_CARDBOARD_V2.distLens2Display;
 
   /**
-   * The cardboard from shopee:
+   * Display PPI (Pixels Per Inch) - fixed hardware parameter
+   * Typical values: 350-500 for phone VR, 400-600 for dedicated HMDs
+   * Used to calculate render target resolution from physical display size
    */
-  ipd = 0.065;
-  f = 0.043;
-  distLens2Display = 0.042;
+  displayPPI = HMD_CARDBOARD_V2.displayPPI;
 
   // Calculated values
   distEye2Display!: number;
@@ -128,7 +120,13 @@ export class HMD {
   // TODO: think about how to show the virtual image
   private virtualImg!: Mesh;
 
-  // render targets for the left and right eyes
+  // Render targets for the left and right eyes
+  // NOTE: Currently created but not actively used for PIP display.
+  // The PIP viewports render directly to canvas via camera viewports.
+  // These are preserved for potential future use:
+  // - Virtual image rendering simulation
+  // - Post-processing effects per eye
+  // - Render-to-texture for HMD display material
   renderTargetL!: RenderTargetTexture;
   renderTargetR!: RenderTargetTexture;
 
@@ -137,9 +135,25 @@ export class HMD {
    * @returns The aspect ratio of an eye's view.
    */
   get aspectRatioEye() {
-    return (
-      (this.rightForLeftEye - this.leftForLeftEye) / (this.top - this.bottom)
-    );
+    // Return aspect ratio as width/height (should be > 1 for typical viewports)
+    // Note: The frustum bounds have vertical > horizontal, so we invert the ratio
+    return (this.top - this.bottom) / (this.rightForLeftEye - this.leftForLeftEye);
+  }
+
+  /**
+   * Get the render target width in pixels based on display physical size and PPI.
+   * @returns The render target width in pixels.
+   */
+  get renderTargetWidth(): number {
+    return Math.round(this.displayWidth * 39.3701 * this.displayPPI);
+  }
+
+  /**
+   * Get the render target height in pixels based on display physical size and PPI.
+   * @returns The render target height in pixels.
+   */
+  get renderTargetHeight(): number {
+    return Math.round(this.displayHeight * 39.3701 * this.displayPPI);
   }
 
   /**
@@ -256,6 +270,16 @@ export class HMD {
   }
 
   /**
+   * Get fixed hardware parameters for display in UI.
+   * @returns The list of fixed hardware parameters.
+   */
+  get displayFixedParams() {
+    return {
+      displayPPI: this.displayPPI,
+    };
+  }
+
+  /**
    * Set a particular param value from the UI sliders.
    * - update the projection matrix and other values
    * - update the visual representation of the HMD
@@ -291,8 +315,24 @@ export class HMD {
     // update the display size with affecting the children
     this.updateDisplaySize();
 
+    // resize render targets if display dimensions changed
+    if (key === 'displayWidth' || key === 'displayHeight') {
+      this.resizeRenderTargets();
+    }
+
     // notify observers that the values have been updated
     this.notifyValuesUpdated();
+  }
+
+  /**
+   * Resize the render targets based on current display dimensions and PPI.
+   * Called when displayWidth or displayHeight parameters change.
+   */
+  public resizeRenderTargets() {
+    const newWidth = this.renderTargetWidth;
+    const newHeight = this.renderTargetHeight;
+    this.renderTargetL.resize({ width: newWidth, height: newHeight });
+    this.renderTargetR.resize({ width: newWidth, height: newHeight });
   }
 
   /**
@@ -400,16 +440,19 @@ export class HMD {
     this.eyeR.layerMask = LAYER_HMD;
     //this.virtualImg.layerMask = LAYER_HMD;
 
-    // create render targets for the left and right eyes
+    // Create render targets for the left and right eyes
+    // NOTE: These render targets are now actively used to fix gaussian splat rendering issues.
+    // They render at the correct resolution based on the HMD's physical display size and PPI.
+    // Future work may add separate render targets for virtual image plane visualization.
     this.renderTargetL = new RenderTargetTexture(
       "renderTargetL",
-      { width: 512, height: 512 },
+      { width: this.renderTargetWidth, height: this.renderTargetHeight },
       scene,
       false,
     );
     this.renderTargetR = new RenderTargetTexture(
       "renderTargetR",
-      { width: 512, height: 512 },
+      { width: this.renderTargetWidth, height: this.renderTargetHeight },
       scene,
       false,
     );
@@ -420,7 +463,6 @@ export class HMD {
     // - this is GLSL code for the distortion shader
     // TODO expose the distortion parameters in the UI
     Effect.ShadersStore["distortionFragmentShader"] = `
-
           // Use high precision for float calculations (important for distortion)
           precision highp float;
 
@@ -457,15 +499,22 @@ export class HMD {
               // Shift distorted delta back to UV space
               vec2 corrected = center + distorted;
 
-              // If corrected coordinate is out of bounds, draw a fallback color
-              if (corrected.x < 0.0 || corrected.x > 1.0 || 
-                  corrected.y < 0.0 || corrected.y > 1.0) {
-                  // Fallback color (greyish pink), used beyond the warped area
-                  gl_FragColor = vec4(0.55, 0.38, 0.4, 1.0);
-              } else {
-                  // Sample the distorted texture normally
-                  gl_FragColor = texture2D(textureSampler, corrected);
-              }
+              // Sample texture FIRST (uniform control flow - required for WebGPU)
+              // This ensures textureSample is called unconditionally
+              vec4 texColor = texture2D(textureSampler, corrected);
+              
+              // Check bounds using step() instead of if/else
+              // step(edge, x) returns 0 if x < edge, 1 if x >= edge
+              // Multiply all bounds checks to get 1.0 only if ALL are satisfied
+              float inBounds = step(0.0, corrected.x) * step(corrected.x, 1.0) 
+                             * step(0.0, corrected.y) * step(corrected.y, 1.0);
+              
+              // Fallback color (greyish pink), used beyond the warped area
+              vec4 fallback = vec4(0.55, 0.38, 0.4, 1.0);
+              
+              // Mix based on bounds check: inBounds=0 → fallback, inBounds=1 → texColor
+              // Using mix() instead of if/else ensures uniform control flow for WebGPU
+              gl_FragColor = mix(fallback, texColor, inBounds);
           }
         `;
 

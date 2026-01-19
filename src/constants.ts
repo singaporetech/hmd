@@ -36,7 +36,58 @@ export const MESH_EDGE_WIDTH = 0.1;
 export const VIEWPORT_BORDER_THICKNESS = 3;
 
 // Configuration for the PIP view
-export const PIP_VIEWPORT_WIDTH = 0.25; // 25% of the screen width
+export const PIP_VIEWPORT_WIDTH = 0.25; // 25% of the screen width (deprecated, use BASE_PIP_WIDTH_FRACTION)
+export const BASE_PIP_WIDTH_FRACTION = 0.20; // Base PIP viewport width as fraction of canvas (20%)
+export const MAX_PIP_WIDTH_FRACTION = 0.45; // Maximum PIP viewport width (45% per viewport, 90% total for two)
+export const MAX_PIP_HEIGHT_FRACTION = 0.9; // Maximum PIP viewport height (90% of canvas)
+
+/**
+ * Interface for HMD device presets
+ * Allows easy addition of new HMD device configurations
+ */
+export interface HMDPreset {
+  // Physical dimensions (meters)
+  eyeRelief: number;
+  displayWidth: number;
+  displayHeight: number;
+  displayDepth: number;
+  lensDiameter: number;
+  lensDepth: number;
+  eyeDiameter: number;
+  
+  // Optical parameters
+  ipd: number;
+  f: number;  // focal length
+  distLens2Display: number;
+  
+  // Other
+  farFromNear: number;
+  displayPPI: number;
+}
+
+/**
+ * Google Cardboard V2 HMD preset
+ * Specs: f=40mm, ipd=64mm, eyeRelief=18mm, distLens2Display=39mm,
+ *        displayWidth=120.96mm, displayHeight=68.03mm, lensDiameter=34mm
+ */
+export const HMD_CARDBOARD_V2: HMDPreset = {
+  eyeRelief: 0.018,
+  displayWidth: 0.12096,
+  displayHeight: 0.068,
+  displayDepth: 0.005,
+  lensDiameter: 0.034,
+  lensDepth: 0.005,
+  eyeDiameter: 0.015,
+  ipd: 0.065,
+  f: 0.043,
+  distLens2Display: 0.042,
+  farFromNear: 1.5,
+  displayPPI: 400,
+};
+
+// Base HMD display dimensions for scaling calculations (from Cardboard 2.0 preset)
+export const BASE_DISPLAY_WIDTH = HMD_CARDBOARD_V2.displayWidth;
+export const BASE_DISPLAY_HEIGHT = HMD_CARDBOARD_V2.displayHeight;
 
 // Display mode
 export enum DisplayMode {

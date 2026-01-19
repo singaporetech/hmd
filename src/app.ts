@@ -45,6 +45,11 @@ import {
   MAIN_CAM_POS,
   CAM_SPEED,
   PIP_VIEWPORT_WIDTH,
+  BASE_PIP_WIDTH_FRACTION,
+  MAX_PIP_WIDTH_FRACTION,
+  MAX_PIP_HEIGHT_FRACTION,
+  BASE_DISPLAY_WIDTH,
+  BASE_DISPLAY_HEIGHT,
   DisplayMode,
 } from "./constants";
 
@@ -315,12 +320,28 @@ export class App {
     this.hmd = new HMD(scene, this.engine);
 
     // Set the viewports for the HMD eye cameras
-    const pipViewPortWidthPixels =
-      this.pipViewPortWidth * this.engine.getRenderWidth();
-    const pipViewPortHeightPixels =
-      pipViewPortWidthPixels / this.hmd.aspectRatioEye;
-    this.pipViewPortHeight =
-      pipViewPortHeightPixels / this.engine.getRenderHeight();
+    // PIP viewport dimensions must:
+    // 1. Viewport WIDTH scales with displayWidth (user control via width slider)
+    // 2. Viewport HEIGHT calculated from aspectRatioEye to prevent distortion
+    // 3. AspectRatioEye changes with displayWidth/displayHeight (wider display → shorter viewport)
+    // 4. Be independent of browser window size
+    
+    const canvasWidth = this.engine.getRenderWidth();
+    const canvasHeight = this.engine.getRenderHeight();
+    
+    // Scale based on displayWidth ONLY
+    // displayHeight affects viewport indirectly through aspectRatioEye
+    const widthScale = this.hmd.displayWidth / BASE_DISPLAY_WIDTH;
+    
+    // Calculate width scaled by displayWidth
+    this.pipViewPortWidth = BASE_PIP_WIDTH_FRACTION * widthScale;
+    
+    // Calculate height to match projection matrix aspect ratio (prevents distortion)
+    // As displayWidth increases: viewport gets wider
+    // As displayHeight increases: aspectRatioEye increases → viewport gets taller
+    const pipWidthPixels = this.pipViewPortWidth * canvasWidth;
+    const pipHeightPixels = pipWidthPixels * this.hmd.aspectRatioEye;
+    this.pipViewPortHeight = pipHeightPixels / canvasHeight;
     this.pipViewPortX = 1 - this.pipViewPortWidth * 2;
     this.pipViewPortY = 1 - this.pipViewPortHeight;
     this.hmd.camL.viewport = new Viewport(
@@ -359,14 +380,14 @@ export class App {
     guiCamera.layerMask = LAYER_UI;
     guiCamera.viewport = new Viewport(0, 0, 1, 1);
 
-    // Ensure this secondary camera renders over the main camera
+    // Configure active cameras for rendering
     scene.activeCameras = [
-      this.camera,
-      this.hmd.camL,
-      this.hmd.camR,
-      guiCamera,
-      this.hmd.controlCam,
-    ]; // Render both cameras
+      this.camera,           // Main camera renders to full viewport
+      this.hmd.camL,         // Left eye camera renders to viewport
+      this.hmd.camR,         // Right eye camera renders to viewport
+      guiCamera,             // UI overlay
+      this.hmd.controlCam,   // Control camera (no viewport)
+    ];
 
     // get view and transform matrices from HMD
     let transformMat = this.hmd.transformMatrix;
@@ -539,15 +560,45 @@ export class App {
       this.pipViewPortX = 0.0;
       this.pipViewPortY = 0.0;
     } else {
-      // calculate the PIP viewport parameters
-      this.pipViewPortWidth = PIP_VIEWPORT_WIDTH;
-      const pipViewPortWidthPixels =
-        this.pipViewPortWidth * this.engine.getRenderWidth();
-      const pipViewPortHeightPixels =
-        pipViewPortWidthPixels / this.hmd.aspectRatioEye;
-      this.pipViewPortHeight =
-        pipViewPortHeightPixels / this.engine.getRenderHeight();
+      // Calculate PIP viewport dimensions
+      // Viewport WIDTH scales with displayWidth
+      // Viewport HEIGHT calculated from aspectRatioEye (prevents distortion)
+      const canvasWidth = this.engine.getRenderWidth();
+      const canvasHeight = this.engine.getRenderHeight();
+      
+      // Scale width based on displayWidth
+      const widthScale = this.hmd.displayWidth / BASE_DISPLAY_WIDTH;
+      
+      // Calculate width scaled by displayWidth
+      this.pipViewPortWidth = BASE_PIP_WIDTH_FRACTION * widthScale;
+      
+      // Calculate height to match projection matrix aspect ratio
+      const pipWidthPixels = this.pipViewPortWidth * canvasWidth;
+      const pipHeightPixels = pipWidthPixels * this.hmd.aspectRatioEye;
+      this.pipViewPortHeight = pipHeightPixels / canvasHeight;
+      
+      // Clamp to ensure viewports fit on screen
+      if (this.pipViewPortWidth > MAX_PIP_WIDTH_FRACTION) {
+        this.pipViewPortWidth = MAX_PIP_WIDTH_FRACTION;
+        // Recalculate height to maintain aspect ratio
+        const clampedWidthPixels = this.pipViewPortWidth * canvasWidth;
+        const clampedHeightPixels = clampedWidthPixels * this.hmd.aspectRatioEye;
+        this.pipViewPortHeight = clampedHeightPixels / canvasHeight;
+      }
+      
+      if (this.pipViewPortHeight > MAX_PIP_HEIGHT_FRACTION) {
+        this.pipViewPortHeight = MAX_PIP_HEIGHT_FRACTION;
+        // Recalculate width to maintain aspect ratio
+        const clampedHeightPixels = this.pipViewPortHeight * canvasHeight;
+        const clampedWidthPixels = clampedHeightPixels / this.hmd.aspectRatioEye;
+        this.pipViewPortWidth = clampedWidthPixels / canvasWidth;
+      }
+      
+      // Anchor PIP viewports to top-right corner
+      // In Babylon.js viewport coordinates: (0,0)=bottom-left, (1,1)=top-right
+      // Left viewport X: positioned two widths from the right edge
       this.pipViewPortX = 1 - this.pipViewPortWidth * 2;
+      // Y: positioned one height from the top edge  
       this.pipViewPortY = 1 - this.pipViewPortHeight;
     }
 
