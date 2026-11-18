@@ -36,6 +36,8 @@ import {
   HMD_CARDBOARD_V2,
 } from "./constants";
 
+import { offAxisProjectionLH } from "./offAxisProjection";
+
 export class HMD {
   private scene: Scene;
 
@@ -784,61 +786,15 @@ export class HMD {
     this.leftForRightEye =
       (-this.distEye2Display * this.imgWidthNasal) / this.distEye2Img;
 
-    ////////////////////////////////
-    // Off-axis projection matrix //
-    // This means we need to calculate the projection matrix manually due to the asymmetry
-    // of the horizontal frustum for the left and right eyes.
-    // The general form of the projection matrix for RHS in OpenGL is:
-    // | 2n/(r-l)     0            0            0   |
-    // | 0            2n/(t-b)     0            0   |
-    // | (r+l)/(r-l)  (t+b)/(t-b)  -(f+n)/(f-n) -1  |
-    // | 0            0            -2fn/(f-n)   0   |
-    // HOWEVER and HOWEVER (yes this took me ages to debug)...
-    // In Babylon.js, it is LHS axes, the the matrix becomes:
-    // | 2n/(r-l)     0            0            0   |
-    // | 0            2n/(t-b)     0            0   |
-    // | (r+l)/(r-l)  (t+b)/(t-b)  (f+n)/(f-n)  1   |
-    // | 0            0            -2fn/(f-n)   0   |
-    // https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/opengl-perspective-projection-matrix.html
-    // https://www.songho.ca/opengl/gl_transform.html#example2
-    // The code is adapted from THREE.js's Matrix4.makePerspective function but with the
-    // signs changed to match Babylon.js's LHS axes.
-
-    // TODO: try to use PerspectiveLH to create the projection matrix with projectionPlaneTilt
-    //       - calculate the projectionPlaneTilt
-    //const projectionPlaneTilt = Math.atan(this.distEye2Display / this.distEye2Img);
-    //const projMatL = Matrix.PerspectiveLH(this.rightForLeftEye - this.leftForLeftEye,
-    //                 this.top - this.bottom, this.near, this.far, false);
-
-    // do left eye calculations
-    let x = (2 * this.near) / (this.rightForLeftEye - this.leftForLeftEye);
-    const y = (2 * this.near) / (this.top - this.bottom);
-    let a =
-      (this.rightForLeftEye + this.leftForLeftEye) /
-      (this.rightForLeftEye - this.leftForLeftEye);
-    const b = (this.top + this.bottom) / (this.top - this.bottom);
-    const c = (this.far + this.near) / (this.far - this.near);
-    const d = (-2 * this.far * this.near) / (this.far - this.near);
-    // if ( coordinateSystem === WebGPUCoordinateSystem )
-    //     c = - far / ( far - near );
-    //     d = ( - far * near ) / ( far - near );
-    this.projMatL = Matrix.FromValues(
-      x, 0, 0, 0,
-      0, y, 0, 0,
-      a, b, c, 1,
-      0, 0, d, 0,
+    // Match the eye-space bounds above. In left-handed coordinates w = z,
+    // so the off-centre terms subtract the bounds' centre rather than add it.
+    this.projMatL = offAxisProjectionLH(
+      this.leftForLeftEye, this.rightForLeftEye,
+      this.bottom, this.top, this.near, this.far,
     );
-
-    // now do right eye calculations
-    x = (2 * this.near) / (this.rightForRightEye - this.leftForRightEye);
-    a =
-      (this.rightForRightEye + this.leftForRightEye) /
-      (this.rightForRightEye - this.leftForRightEye);
-    this.projMatR = Matrix.FromValues(
-      x, 0, 0, 0,
-      0, y, 0, 0,
-      a, b, c, 1,
-      0, 0, d, 0,
+    this.projMatR = offAxisProjectionLH(
+      this.leftForRightEye, this.rightForRightEye,
+      this.bottom, this.top, this.near, this.far,
     );
   }
 
