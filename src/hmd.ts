@@ -786,8 +786,8 @@ export class HMD {
     this.leftForRightEye =
       (-this.distEye2Display * this.imgWidthNasal) / this.distEye2Img;
 
-    // Match the eye-space bounds above. In left-handed coordinates w = z,
-    // so the off-centre terms subtract the bounds' centre rather than add it.
+    // Off-axis projection, one matrix per eye. See offAxisProjection.ts for the
+    // matrix and how it differs between left-handed and right-handed axes.
     this.projMatL = offAxisProjectionLH(
       this.leftForLeftEye, this.rightForLeftEye,
       this.bottom, this.top, this.near, this.far,
