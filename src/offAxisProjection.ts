@@ -5,7 +5,8 @@ import { Matrix } from "@babylonjs/core/Maths/math.vector.js";
  *
  * We calculate the projection matrix manually due to the asymmetry of the
  * horizontal frustum for the left and right eyes. The bounds are in eye space,
- * on the near plane.
+ * on the near plane. Matrices are written in Babylon's row-vector layout, with
+ * clip depth from -1 to +1.
  *
  * The general form of the projection matrix for RHS in OpenGL is:
  * | 2n/(r-l)     0            0            0   |
