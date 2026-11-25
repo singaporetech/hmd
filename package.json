@@ -16,6 +16,7 @@
         "test": "vitest --reporter=verbose",
         "test:ui": "vitest --ui",
         "test:run": "vitest --run",
+        "test:projection": "node --test tests/offAxisProjection.node.mjs",
         "clean": "rm -rf dist node_modules package-lock.json"
     },
     "keywords": [],
